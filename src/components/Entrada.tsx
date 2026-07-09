@@ -33,11 +33,13 @@ export function Entrada() {
   });
 
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [items, setItems] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadData() {
       const db = await fetchDb();
       setEntradas(db.entradas || []);
+      setItems(db.items || []);
     }
     loadData();
     window.addEventListener('storage', loadData);
@@ -47,7 +49,22 @@ export function Entrada() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
-    setFormData(prev => ({ ...prev, [name]: val }));
+    
+    setFormData(prev => {
+      const updated = { ...prev, [name]: val };
+      
+      if (name === 'codigoItem' && value) {
+        const foundItem = items.find(
+          item => item.codigoSAP?.toUpperCase() === value.toUpperCase()
+        );
+        if (foundItem) {
+          updated.descricao = foundItem.descricao || '';
+          updated.und = foundItem.und || 'UN';
+        }
+      }
+      
+      return updated;
+    });
   };
 
   const formatCurrency = (value: string) => {
