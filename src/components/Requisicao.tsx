@@ -1,11 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Search, Download, Filter, MoreVertical, Calendar, Package, FileText, CheckCircle, XCircle, AlertCircle, MapPin, Truck, Printer, X, User, Camera, PenTool, Trash2, MessageSquare, Plus } from "lucide-react";
 import { motion, AnimatePresence } from 'motion/react';
 import { MobileMenu } from './MobileMenu';
 import SignatureCanvas from 'react-signature-canvas';
 import { NovaRequisicao } from './NovaRequisicao';
-
-const mockRequisicoes: any[] = [];
+import { fetchDb, saveDb } from '../services/githubDb';
 
 export function Requisicao({ userRole = 'almoxerife', onNovaRequisicao, activeTab, onNavigate, userName, onLogout }: { userRole?: string, onNovaRequisicao?: () => void, activeTab?: string, onNavigate?: (tab: string) => void, userName?: string, onLogout?: () => void }) {
   const isAlmoxarife = userRole === 'almoxerife';
@@ -23,6 +22,18 @@ export function Requisicao({ userRole = 'almoxerife', onNovaRequisicao, activeTa
   const [filterDataDesejada, setFilterDataDesejada] = useState('');
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const signatureRef = useRef<SignatureCanvas>(null);
+  
+  const [requisicoes, setRequisicoes] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadData() {
+      const db = await fetchDb();
+      setRequisicoes(db.requisicoes || []);
+    }
+    loadData();
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
+  }, []);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -41,7 +52,7 @@ export function Requisicao({ userRole = 'almoxerife', onNovaRequisicao, activeTa
     return `${day}/${month}/${year}`;
   };
 
-  const filteredRequisicoes = mockRequisicoes.filter(req => {
+  const filteredRequisicoes = requisicoes.filter(req => {
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch = Object.values(req).some(val => 
       val && val.toString().toLowerCase().includes(searchLower)

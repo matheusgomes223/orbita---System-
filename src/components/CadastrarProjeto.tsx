@@ -1,21 +1,32 @@
-import React, { useState } from 'react';
-import { Search, Plus, X, Check, Hash, FolderTree, FileText, User, Users, Bell } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, X, Check, Hash, FolderTree, FileText, User, Users, Bell, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-const mockProjetos: Array<{ id: string, elementoPep: string, pepRaiz: string, nomeProjeto: string, descricao: string, implantador: string, planejadores: string, notificacoes: string }> = [];
+import { fetchDb, saveDb } from '../services/githubDb';
 
 export function CadastrarProjeto() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [projetos, setProjetos] = useState(mockProjetos);
+  const [projetos, setProjetos] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
   const [elementoPep, setElementoPep] = useState('');
   const [pepRaiz, setPepRaiz] = useState('');
   const [nomeProjeto, setNomeProjeto] = useState('');
-  const [descricao, setDescricao] = useState('');
   const [implantador, setImplantador] = useState('');
   const [planejadores, setPlanejadores] = useState('');
   const [notificacoes, setNotificacoes] = useState('');
+
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadData() {
+      const db = await fetchDb();
+      setProjetos(db.projetos || []);
+    }
+    loadData();
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
+  }, []);
 
   const filteredProjetos = projetos.filter(proj => {
     const searchLower = searchTerm.toLowerCase();
@@ -24,21 +35,58 @@ export function CadastrarProjeto() {
     );
   });
 
-  const handleCadastrar = () => {
-    if (elementoPep && pepRaiz && nomeProjeto && descricao) {
-      const novoProjeto = {
-        id: Math.random().toString(36).substr(2, 9),
+  const handleCadastrar = async () => {
+    if (elementoPep && pepRaiz && nomeProjeto) {
+      const projetoData = {
         elementoPep,
         pepRaiz,
         nomeProjeto,
-        descricao,
         implantador,
         planejadores,
         notificacoes
       };
-      setProjetos([novoProjeto, ...projetos]);
+
+      let updated: any[] = [];
+      if (editingItemId) {
+        updated = projetos.map(proj => proj.id === editingItemId ? { ...proj, ...projetoData } : proj);
+      } else {
+        const novoProjeto = {
+          id: Math.random().toString(36).substr(2, 9),
+          ...projetoData
+        };
+        updated = [novoProjeto, ...projetos];
+      }
+      setProjetos(updated);
+
+      const db = await fetchDb();
+      db.projetos = updated;
+      await saveDb(db);
+
       closeModal();
     }
+  };
+
+  const handleEdit = (proj: any) => {
+    setElementoPep(proj.elementoPep);
+    setPepRaiz(proj.pepRaiz);
+    setNomeProjeto(proj.nomeProjeto);
+    setImplantador(proj.implantador || '');
+    setPlanejadores(proj.planejadores || '');
+    setNotificacoes(proj.notificacoes || '');
+    setEditingItemId(proj.id);
+    setOpenDropdownId(null);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    const updated = projetos.filter(proj => proj.id !== id);
+    setProjetos(updated);
+
+    const db = await fetchDb();
+    db.projetos = updated;
+    await saveDb(db);
+
+    setOpenDropdownId(null);
   };
 
   const closeModal = () => {
@@ -46,10 +94,10 @@ export function CadastrarProjeto() {
     setElementoPep('');
     setPepRaiz('');
     setNomeProjeto('');
-    setDescricao('');
     setImplantador('');
     setPlanejadores('');
     setNotificacoes('');
+    setEditingItemId(null);
   };
 
   return (
@@ -83,26 +131,23 @@ export function CadastrarProjeto() {
               <th className="px-6 py-5 w-40">Elemento PEP</th>
               <th className="px-6 py-5 w-32">PEP Raiz</th>
               <th className="px-6 py-5">Nome do Projeto</th>
-              <th className="px-6 py-5 min-w-[200px]">Descrição</th>
               <th className="px-6 py-5">Implantador</th>
               <th className="px-6 py-5">Planejadores</th>
               <th className="px-6 py-5">Notificações</th>
+              <th className="px-6 py-5 w-16"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-base">
             {filteredProjetos.map((proj) => (
               <tr key={proj.id} className="hover:bg-slate-50/50 transition-colors group">
-                <td className="px-6 py-5 text-slate-700 font-medium">
+                <td className="px-6 py-5 text-slate-700 font-medium font-mono text-sm">
                   {proj.elementoPep}
                 </td>
-                <td className="px-6 py-5 text-slate-600">
+                <td className="px-6 py-5 text-slate-600 font-mono text-sm">
                   {proj.pepRaiz}
                 </td>
                 <td className="px-6 py-5 text-slate-600">
                   {proj.nomeProjeto}
-                </td>
-                <td className="px-6 py-5 text-slate-600 truncate max-w-xs">
-                  {proj.descricao}
                 </td>
                 <td className="px-6 py-5 text-slate-600">
                   {proj.implantador || '-'}
@@ -112,6 +157,46 @@ export function CadastrarProjeto() {
                 </td>
                 <td className="px-6 py-5 text-slate-600">
                   {proj.notificacoes || '-'}
+                </td>
+                <td className="px-6 py-5 text-center relative">
+                  <button 
+                    onClick={() => setOpenDropdownId(openDropdownId === proj.id ? null : proj.id)}
+                    className="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-100 transition-colors"
+                  >
+                    <MoreVertical className="w-5 h-5" />
+                  </button>
+                  <AnimatePresence>
+                    {openDropdownId === proj.id && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-10"
+                          onClick={() => setOpenDropdownId(null)}
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ duration: 0.1 }}
+                          className="absolute right-8 top-1/2 -translate-y-1/2 w-32 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20"
+                        >
+                          <button
+                            onClick={() => handleEdit(proj)}
+                            className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-[#3B82F6] flex items-center gap-2 transition-colors"
+                          >
+                            <Pencil className="w-4 h-4" />
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => handleDelete(proj.id)}
+                            className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-rose-500 flex items-center gap-2 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Excluir
+                          </button>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
                 </td>
               </tr>
             ))}
@@ -141,12 +226,16 @@ export function CadastrarProjeto() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white rounded-xl shadow-xl z-50 overflow-hidden flex flex-col max-h-[90vh]"
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg bg-white rounded-xl shadow-xl z-50 overflow-hidden flex flex-col max-h-[90vh]"
             >
               <div className="flex items-center justify-between p-6 border-b border-slate-100">
                 <div>
-                  <h2 className="text-lg font-bold text-slate-800">Cadastrar Projeto (PEP)</h2>
-                  <p className="text-sm text-slate-500 mt-1">Preencha os dados do novo projeto</p>
+                  <h2 className="text-lg font-bold text-slate-800">
+                    {editingItemId ? 'Editar Projeto' : 'Cadastrar Projeto'}
+                  </h2>
+                  <p className="text-sm text-slate-500 mt-1">
+                    {editingItemId ? 'Edite os dados do projeto selecionado' : 'Preencha os dados do novo projeto'}
+                  </p>
                 </div>
                 <button 
                   onClick={closeModal}
@@ -158,7 +247,7 @@ export function CadastrarProjeto() {
 
               <div className="p-6 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 col-span-2">
                     <label className="text-sm font-medium text-slate-700">Elemento PEP</label>
                     <input 
                       type="text" 
@@ -169,7 +258,7 @@ export function CadastrarProjeto() {
                     />
                   </div>
                   
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 col-span-2">
                     <label className="text-sm font-medium text-slate-700">PEP Raiz</label>
                     <input 
                       type="text" 
@@ -188,17 +277,6 @@ export function CadastrarProjeto() {
                       onChange={(e) => setNomeProjeto(e.target.value)}
                       placeholder="Ex: Ampliação Galpão A"
                       className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5 col-span-2">
-                    <label className="text-sm font-medium text-slate-700">Descrição</label>
-                    <textarea 
-                      value={descricao}
-                      onChange={(e) => setDescricao(e.target.value)}
-                      placeholder="Detalhes do projeto..."
-                      rows={3}
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all resize-none"
                     />
                   </div>
 
@@ -249,7 +327,7 @@ export function CadastrarProjeto() {
                   className="flex-1 px-4 py-2 bg-[#3B82F6] text-white rounded-lg text-sm font-medium hover:bg-[#2563EB] transition-colors flex items-center justify-center gap-2"
                 >
                   <Check className="w-4 h-4" />
-                  Cadastrar
+                  {editingItemId ? 'Salvar' : 'Cadastrar'}
                 </button>
               </div>
             </motion.div>

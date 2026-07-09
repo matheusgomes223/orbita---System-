@@ -1,18 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, X, Check, User, Briefcase, Mail, Hash } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-const mockRequisitantes: Array<{ id: string, nome: string, matricula: string, gerencia: string, email: string }> = [];
+import { fetchDb, saveDb } from '../services/githubDb';
 
 export function CadastrarRequisitante() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [requisitantes, setRequisitantes] = useState(mockRequisitantes);
+  const [requisitantes, setRequisitantes] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
   const [nome, setNome] = useState('');
   const [matricula, setMatricula] = useState('');
   const [gerencia, setGerencia] = useState('');
   const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    async function loadData() {
+      const db = await fetchDb();
+      setRequisitantes(db.requisitantes || []);
+    }
+    loadData();
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
+  }, []);
 
   const filteredRequisitantes = requisitantes.filter(req => {
     const searchLower = searchTerm.toLowerCase();
@@ -21,7 +30,7 @@ export function CadastrarRequisitante() {
     );
   });
 
-  const handleCadastrar = () => {
+  const handleCadastrar = async () => {
     if (nome && matricula && gerencia && email) {
       const novoRequisitante = {
         id: Math.random().toString(36).substr(2, 9),
@@ -30,7 +39,13 @@ export function CadastrarRequisitante() {
         gerencia,
         email,
       };
-      setRequisitantes([novoRequisitante, ...requisitantes]);
+      const updated = [novoRequisitante, ...requisitantes];
+      setRequisitantes(updated);
+
+      const db = await fetchDb();
+      db.requisitantes = updated;
+      await saveDb(db);
+
       closeModal();
     }
   };

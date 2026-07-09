@@ -1,21 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Printer, CheckSquare, Square, FileText, X } from "lucide-react";
 import { motion } from 'motion/react';
-
-// ... (keep the mockEstoque the same, so let's match carefully)
-
-const mockEstoque: any[] = [];
+import { fetchDb } from '../services/githubDb';
 
 export function GeradorEtiquetas({ onClose }: { onClose?: () => void }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [isPrinting, setIsPrinting] = useState(false);
+  const [estoque, setEstoque] = useState<any[]>([]);
 
-  const filteredEstoque = mockEstoque.filter(item => {
+  useEffect(() => {
+    async function loadData() {
+      const db = await fetchDb();
+      setEstoque(db.estoque || []);
+    }
+    loadData();
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
+  }, []);
+
+  const filteredEstoque = estoque.filter(item => {
     const searchLower = searchTerm.toLowerCase();
-    return item.descricao.toLowerCase().includes(searchLower) || 
-           item.codigoSAP.toLowerCase().includes(searchLower) ||
-           item.partNumber.toLowerCase().includes(searchLower);
+    return (item.descricao || '').toLowerCase().includes(searchLower) || 
+           (item.codigoSAP || '').toLowerCase().includes(searchLower) ||
+           (item.partNumber || '').toLowerCase().includes(searchLower);
   });
 
   const toggleSelection = (id: string) => {
@@ -41,7 +49,7 @@ export function GeradorEtiquetas({ onClose }: { onClose?: () => void }) {
     }, 500);
   };
 
-  const selectedData = mockEstoque.filter(item => selectedItems.includes(item.id));
+  const selectedData = estoque.filter(item => selectedItems.includes(item.id));
 
   return (
     <div className="flex flex-col h-full bg-white relative">

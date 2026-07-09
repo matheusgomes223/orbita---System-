@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, X, Check, MapPin, Building, FolderTree, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-const mockEnderecos: Array<{ id: string, codigo: string, local: string, descricao: string }> = [];
+import { fetchDb, saveDb } from '../services/githubDb';
 
 export function CadastrarEndereco() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [enderecos, setEnderecos] = useState(mockEnderecos);
+  const [enderecos, setEnderecos] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
   const [codigo, setCodigo] = useState('');
@@ -15,6 +14,18 @@ export function CadastrarEndereco() {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
+  useEffect(() => {
+    async function loadData() {
+      const db = await fetchDb();
+      setEnderecos(db.enderecos || []);
+    }
+    loadData();
+
+    // Listen to changes in config (like settings token updates)
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
+  }, []);
+
   const filteredEnderecos = enderecos.filter(end => {
     const searchLower = searchTerm.toLowerCase();
     return Object.values(end).some(val => 
@@ -22,10 +33,11 @@ export function CadastrarEndereco() {
     );
   });
 
-  const handleCadastrar = () => {
+  const handleCadastrar = async () => {
     if (codigo && local && descricao) {
+      let updated: any[] = [];
       if (editingItemId) {
-        setEnderecos(enderecos.map(end => end.id === editingItemId ? { ...end, codigo, local, descricao } : end));
+        updated = enderecos.map(end => end.id === editingItemId ? { ...end, codigo, local, descricao } : end);
       } else {
         const novoEndereco = {
           id: Math.random().toString(36).substr(2, 9),
@@ -33,8 +45,14 @@ export function CadastrarEndereco() {
           local,
           descricao
         };
-        setEnderecos([novoEndereco, ...enderecos]);
+        updated = [novoEndereco, ...enderecos];
       }
+      setEnderecos(updated);
+      
+      const db = await fetchDb();
+      db.enderecos = updated;
+      await saveDb(db);
+      
       closeModal();
     }
   };
@@ -48,8 +66,14 @@ export function CadastrarEndereco() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    setEnderecos(enderecos.filter(end => end.id !== id));
+  const handleDelete = async (id: string) => {
+    const updated = enderecos.filter(end => end.id !== id);
+    setEnderecos(updated);
+    
+    const db = await fetchDb();
+    db.enderecos = updated;
+    await saveDb(db);
+    
     setOpenDropdownId(null);
   };
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Package, Plus, ShoppingCart, ArrowRight, CheckCircle, FileText, X, Pencil, Check } from "lucide-react";
 import { motion, AnimatePresence } from 'motion/react';
+import { fetchDb, saveDb } from '../services/githubDb';
 
 export function NovaRequisicao({ onClose }: { onClose?: () => void }) {
   const [searchValue, setSearchValue] = useState('');
@@ -18,26 +19,28 @@ export function NovaRequisicao({ onClose }: { onClose?: () => void }) {
   const [nomeRecebedor, setNomeRecebedor] = useState('');
   const [matriculaRecebedor, setMatriculaRecebedor] = useState('');
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchValue) return;
     
     setIsSearching(true);
-    // Mock search
-    setTimeout(() => {
-      setProjectInfo({
-        codigo: searchValue,
-        nome: "Manutenção Preventiva - Linha de Produção 1",
-        centroCusto: "CC-90123",
-        status: "Ativo"
-      });
-      setResults([
-        { id: '1', codigoSAP: 'SAP-10293', descricao: 'Cimento Portland CP II', quantidade: 50, um: 'KG', disponivel: 1200 },
-        { id: '2', codigoSAP: 'SAP-10294', descricao: 'Parafuso Sextavado 5/8', quantidade: 100, um: 'UN', disponivel: 5000 },
-      ]);
-      setIsSearching(false);
-      setStep(2);
-    }, 800);
+    const db = await fetchDb();
+    
+    const searchLower = searchValue.toLowerCase();
+    const searchResults = (db.estoque || []).filter((item: any) => 
+      item.codigoSAP.toLowerCase().includes(searchLower) ||
+      item.descricao.toLowerCase().includes(searchLower)
+    );
+    
+    setResults(searchResults);
+    setProjectInfo({
+      codigo: searchValue,
+      nome: "Manutenção Preventiva - Linha de Produção 1",
+      centroCusto: "CC-90123",
+      status: "Ativo"
+    });
+    setIsSearching(false);
+    setStep(2);
   };
 
   const addToCart = (item: any) => {
@@ -54,7 +57,32 @@ export function NovaRequisicao({ onClose }: { onClose?: () => void }) {
     setCart(cart.map(i => i.id === id ? { ...i, quantidadeSolicitada: qtd } : i));
   };
 
-  const submitRequisicao = () => {
+  const submitRequisicao = async () => {
+    const db = await fetchDb();
+    const novaReq = {
+      id: String(Date.now()),
+      requisicao: `REQ-${Math.floor(1000 + Math.random() * 9000)}`,
+      requisitante: 'Matheus Gomes',
+      matricula: matriculaRecebedor || '98120',
+      projetoDestino: 'Obras Civil',
+      tipoSaida: tipoRetirada === 'entrega' ? 'ENTREGA' : 'BALCÃO CMP',
+      statusAprovacao: 'Aguardando',
+      statusLogistico: 'Pendente',
+      dataDesejada: new Date().toISOString().split('T')[0],
+      detalhesAprovador: {
+        nome: 'Roberto Costa',
+        cargo: 'Gerente de Manutenção',
+        dataSolicitacao: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      },
+      itens: cart.map(item => ({
+        codigo: item.codigoSAP,
+        descricao: item.descricao,
+        quantidade: item.quantidadeSolicitada,
+        endereco: item.endereco || 'A-01-01'
+      }))
+    };
+    db.requisicoes = [novaReq, ...(db.requisicoes || [])];
+    await saveDb(db);
     setStep(3);
   };
 

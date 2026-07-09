@@ -6,8 +6,9 @@ import {
   Building, MapPin, SlidersHorizontal, ClipboardList, Database, DollarSign,
   LayoutDashboard, Book, ArrowDownToLine, Truck, FolderCog, PieChart,
   Boxes, BookOpen, CheckCircle2, Camera, PenTool, Eraser, ChevronDown,
-  Mail, Lock
+  Mail, Lock, Settings
 } from 'lucide-react';
+import { getGithubToken, setGithubToken, fetchDb, saveDb } from '../services/githubDb';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from 'recharts';
 import { OrbitaIcon } from './OrbitaIcon';
 import { CadastrarItem } from './CadastrarItem';
@@ -116,6 +117,8 @@ export function AlmoxarifeDashboard({ onLogout, userRole = 'almoxerife' }: { onL
   const [userProfilePic, setUserProfilePic] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState('');
+  const [isDbModalOpen, setIsDbModalOpen] = useState(false);
+  const [dbTokenInput, setDbTokenInput] = useState(getGithubToken());
 
   const toggleMenu = (menu: string) => {
     setExpandedMenus(prev => 
@@ -364,15 +367,29 @@ export function AlmoxarifeDashboard({ onLogout, userRole = 'almoxerife' }: { onL
               <span className="text-sm font-bold text-[#0C2340] group-hover:text-[#3B82F6] transition-colors truncate">{userName}</span>
               <span className="text-[11px] font-medium text-slate-500 truncate capitalize">{userRole === 'almoxerife' ? 'Almoxarife Líder' : userRole}</span>
             </div>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                onLogout();
-              }} 
-              className="text-slate-400 hover:text-red-500 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDbTokenInput(getGithubToken());
+                  setIsDbModalOpen(true);
+                }} 
+                className="text-slate-400 hover:text-[#3B82F6] transition-colors p-1 rounded hover:bg-slate-100"
+                title="Configurar Banco de Dados"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLogout();
+                }} 
+                className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-slate-100"
+                title="Sair"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
@@ -561,6 +578,72 @@ export function AlmoxarifeDashboard({ onLogout, userRole = 'almoxerife' }: { onL
                 >
                   <LogOut className="w-4 h-4" />
                   Sair do Sistema
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+        {isDbModalOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDbModalOpen(false)}
+              className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-xl shadow-xl z-50 overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Database className="w-5 h-5 text-[#3B82F6]" />
+                  <h2 className="text-lg font-bold text-slate-800">Conexão do Banco de Dados</h2>
+                </div>
+                <button 
+                  onClick={() => setIsDbModalOpen(false)}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Para habilitar a persistência em tempo real no repositório GitHub, gere um <strong>Personal Access Token (PAT)</strong> com escopo de acesso <code>repo</code> e insira-o abaixo.
+                </p>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700">GitHub Personal Access Token (PAT)</label>
+                  <input 
+                    type="password" 
+                    value={dbTokenInput}
+                    onChange={(e) => setDbTokenInput(e.target.value)}
+                    placeholder="ghp_xxxxxxxxxxxx"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-200 bg-white flex gap-3">
+                <button 
+                  onClick={() => setIsDbModalOpen(false)}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={() => {
+                    setGithubToken(dbTokenInput);
+                    showToast('Configuração do GitHub salva com sucesso!', 'success');
+                    setIsDbModalOpen(false);
+                  }}
+                  className="flex-1 px-4 py-2 bg-[#3B82F6] text-white rounded-lg text-sm font-medium hover:bg-[#2563EB] transition-colors"
+                >
+                  Salvar Token
                 </button>
               </div>
             </motion.div>

@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, MoreVertical, X, Upload, Check, ImageIcon, ChevronDown, Pencil, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-const mockItems: Array<{ id: string, codigoSAP: string, partNumber: string, descricao: string, und: string, valor: number, foto?: string | null }> = [];
+import { fetchDb, saveDb } from '../services/githubDb';
 
 export function CadastrarItem() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [items, setItems] = useState(mockItems);
+  const [items, setItems] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
   const [unidadeMedida, setUnidadeMedida] = useState('');
@@ -18,6 +17,16 @@ export function CadastrarItem() {
   const [descricao, setDescricao] = useState('');
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadData() {
+      const db = await fetchDb();
+      setItems(db.items || []);
+    }
+    loadData();
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
+  }, []);
 
   const formatCurrency = (value: string) => {
     let rawValue = value.replace(/\D/g, '');
@@ -41,7 +50,7 @@ export function CadastrarItem() {
     }
   };
 
-  const handleCadastrar = () => {
+  const handleCadastrar = async () => {
     if (!codigoSAP || !descricao || !unidadeMedida || !valorUnitario) {
       alert('Por favor, preencha os campos obrigatórios (Código SAP, Descrição, Unidade e Valor).');
       return;
@@ -58,15 +67,21 @@ export function CadastrarItem() {
       foto: fotoMaterial,
     };
 
+    let updated: any[] = [];
     if (editingItemId) {
-      setItems(items.map(item => item.id === editingItemId ? { ...item, ...itemData } : item));
+      updated = items.map(item => item.id === editingItemId ? { ...item, ...itemData } : item);
     } else {
       const newItem = {
         id: String(Date.now()),
         ...itemData
       };
-      setItems([newItem, ...items]);
+      updated = [newItem, ...items];
     }
+    setItems(updated);
+
+    const db = await fetchDb();
+    db.items = updated;
+    await saveDb(db);
 
     closeModal();
   };
@@ -83,8 +98,14 @@ export function CadastrarItem() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
+  const handleDelete = async (id: string) => {
+    const updated = items.filter(item => item.id !== id);
+    setItems(updated);
+
+    const db = await fetchDb();
+    db.items = updated;
+    await saveDb(db);
+
     setOpenDropdownId(null);
   };
 

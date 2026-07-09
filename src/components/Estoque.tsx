@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Download, Filter, MoreVertical, ImageIcon, ArrowUpRight, ArrowDownRight, X, User, MapPin, Building, Package, Tag, Hash, Calendar, DollarSign, BookOpen, AlertCircle, FileText } from "lucide-react";
 import { motion, AnimatePresence } from 'motion/react';
 import { GeradorEtiquetas } from './GeradorEtiquetas';
 import { MobileMenu } from './MobileMenu';
-
-const mockEstoque: any[] = [];
+import { fetchDb } from '../services/githubDb';
 
 export function Estoque({ userRole = 'almoxerife', activeTab, onNavigate, userName, onLogout }: { userRole?: string, activeTab?: string, onNavigate?: (tab: string) => void, userName?: string, onLogout?: () => void }) {
   const isAlmoxarife = userRole === 'almoxerife';
@@ -13,8 +12,19 @@ export function Estoque({ userRole = 'almoxerife', activeTab, onNavigate, userNa
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [showEtiquetas, setShowEtiquetas] = useState(false);
+  const [estoque, setEstoque] = useState<any[]>([]);
 
-  const filteredEstoque = mockEstoque.filter(item => {
+  useEffect(() => {
+    async function loadData() {
+      const db = await fetchDb();
+      setEstoque(db.estoque || []);
+    }
+    loadData();
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
+  }, []);
+
+  const filteredEstoque = estoque.filter(item => {
     const searchLower = searchTerm.toLowerCase();
     return Object.values(item).some(val => 
       val && val.toString().toLowerCase().includes(searchLower)

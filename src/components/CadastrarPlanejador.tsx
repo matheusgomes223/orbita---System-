@@ -1,19 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, X, Check, User, Briefcase, Mail, Users, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-const mockPlanejadores: Array<{ id: string, nome: string, gerencia: string, email: string, grupoAprovador: string, grupoInformacao: string }> = [];
+import { fetchDb, saveDb } from '../services/githubDb';
 
 export function CadastrarPlanejador() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [planejadores, setPlanejadores] = useState(mockPlanejadores);
+  const [planejadores, setPlanejadores] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
   const [nome, setNome] = useState('');
   const [gerencia, setGerencia] = useState('');
   const [email, setEmail] = useState('');
   const [grupoAprovador, setGrupoAprovador] = useState('');
-  const [grupoInformacao, setGrupoInformacao] = useState('');
+
+  useEffect(() => {
+    async function loadData() {
+      const db = await fetchDb();
+      setPlanejadores(db.planejadores || []);
+    }
+    loadData();
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
+  }, []);
 
   const filteredPlanejadores = planejadores.filter(plan => {
     const searchLower = searchTerm.toLowerCase();
@@ -22,17 +30,22 @@ export function CadastrarPlanejador() {
     );
   });
 
-  const handleCadastrar = () => {
+  const handleCadastrar = async () => {
     if (nome && gerencia && email) {
       const novoPlanejador = {
         id: Math.random().toString(36).substr(2, 9),
         nome,
         gerencia,
         email,
-        grupoAprovador,
-        grupoInformacao
+        grupoAprovador
       };
-      setPlanejadores([novoPlanejador, ...planejadores]);
+      const updated = [novoPlanejador, ...planejadores];
+      setPlanejadores(updated);
+
+      const db = await fetchDb();
+      db.planejadores = updated;
+      await saveDb(db);
+
       closeModal();
     }
   };
@@ -43,7 +56,6 @@ export function CadastrarPlanejador() {
     setGerencia('');
     setEmail('');
     setGrupoAprovador('');
-    setGrupoInformacao('');
   };
 
   return (
@@ -78,7 +90,6 @@ export function CadastrarPlanejador() {
               <th className="px-6 py-5 w-40">Gerência</th>
               <th className="px-6 py-5">E-mail</th>
               <th className="px-6 py-5">Grupo Aprovador</th>
-              <th className="px-6 py-5">Grupo Informação</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-base">
@@ -96,14 +107,11 @@ export function CadastrarPlanejador() {
                 <td className="px-6 py-5 text-slate-600">
                   {plan.grupoAprovador || '-'}
                 </td>
-                <td className="px-6 py-5 text-slate-600">
-                  {plan.grupoInformacao || '-'}
-                </td>
               </tr>
             ))}
             {filteredPlanejadores.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                <td colSpan={4} className="px-6 py-8 text-center text-slate-500">
                   Nenhum planejador encontrado.
                 </td>
               </tr>
@@ -177,24 +185,13 @@ export function CadastrarPlanejador() {
                     />
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 col-span-2">
                     <label className="text-sm font-medium text-slate-700">Grupo Aprovador</label>
                     <input 
                       type="text" 
                       value={grupoAprovador}
                       onChange={(e) => setGrupoAprovador(e.target.value)}
                       placeholder="Ex: Liderança"
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-slate-700">Grupo Informação</label>
-                    <input 
-                      type="text" 
-                      value={grupoInformacao}
-                      onChange={(e) => setGrupoInformacao(e.target.value)}
-                      placeholder="Ex: Equipe Técnica"
                       className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all"
                     />
                   </div>

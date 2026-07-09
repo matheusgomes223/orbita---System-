@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, MoreVertical, X, Package, FileText, Check, AlertTriangle, Building, Tag, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-
-const mockEntradas: Array<{ id: string, numDoc: string, notaFiscal: string, fornecedor: string, codigoItem: string, descricao: string, quantidade: number, und: string, data: string, divergente: boolean }> = [];
+import { fetchDb, saveDb } from '../services/githubDb';
 
 export function Entrada() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [entradas, setEntradas] = useState(mockEntradas);
+  const [entradas, setEntradas] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
   // Form State
@@ -35,6 +34,16 @@ export function Entrada() {
 
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
+  useEffect(() => {
+    async function loadData() {
+      const db = await fetchDb();
+      setEntradas(db.entradas || []);
+    }
+    loadData();
+    window.addEventListener('storage', loadData);
+    return () => window.removeEventListener('storage', loadData);
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
@@ -52,7 +61,7 @@ export function Entrada() {
     setFormData(prev => ({ ...prev, valorTotal: formatCurrency(e.target.value) }));
   };
 
-  const handleCadastrar = () => {
+  const handleCadastrar = async () => {
     if (!formData.numDoc || !formData.notaFiscal || !formData.codigoItem) {
       alert('Por favor, preencha os campos obrigatórios (Num Doc, Nota Fiscal, Código do Item).');
       return;
@@ -71,7 +80,41 @@ export function Entrada() {
       divergente: formData.divergente
     };
 
-    setEntradas([novaEntrada, ...entradas]);
+    const updatedEntradas = [novaEntrada, ...entradas];
+    setEntradas(updatedEntradas);
+
+    const db = await fetchDb();
+    db.entradas = updatedEntradas;
+
+    // Also insert or update the item in the physical stock (estoque)
+    const valorFloat = parseFloat(formData.valorTotal.replace(/\./g, '').replace(',', '.')) || 0;
+    const novoEstoqueItem = {
+      id: String(Date.now()),
+      descricao: formData.descricao || 'Item sem descrição',
+      codigoItem: formData.codigoItem,
+      codigoSAP: formData.codigoItem,
+      saldo: Number(formData.quantidade) || 0,
+      qtdRsv: 0,
+      disponivel: Number(formData.quantidade) || 0,
+      um: formData.und || 'UN',
+      endereco: formData.enderecoArmazenagem || '-',
+      abc: formData.classificacao || 'C',
+      planejador: formData.planejador || '-',
+      pedidoPo: formData.pedidoCompra || '-',
+      cCusto: formData.centroCusto || '-',
+      projeto: formData.projetoPep || '-',
+      valorTotal: valorFloat,
+      nfEntrada: formData.notaFiscal,
+      dataEntrada: new Date().toLocaleDateString('pt-BR'),
+      requisitante: '-',
+      areaDestino: formData.aplicacao || '-',
+      partNumber: '-',
+      regEntrada: formData.numDoc
+    };
+
+    db.estoque = [novoEstoqueItem, ...(db.estoque || [])];
+    await saveDb(db);
+
     closeModal();
   };
 
