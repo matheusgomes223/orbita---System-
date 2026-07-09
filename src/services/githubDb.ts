@@ -26,13 +26,7 @@ function setLocalCache(db: any) {
 
 export function getGithubToken() {
   // @ts-ignore
-  const envToken = import.meta.env?.VITE_GITHUB_TOKEN;
-  return localStorage.getItem('ORBITA_GITHUB_TOKEN') || envToken || '';
-}
-
-export function setGithubToken(token: string) {
-  localStorage.setItem('ORBITA_GITHUB_TOKEN', token);
-  window.dispatchEvent(new Event('storage'));
+  return import.meta.env?.VITE_GITHUB_TOKEN || '';
 }
 
 export function hasGithubConfig() {
