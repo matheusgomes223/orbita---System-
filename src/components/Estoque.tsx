@@ -67,7 +67,15 @@ export function Estoque({ userRole = 'almoxerife', activeTab, onNavigate, userNa
               <Tag className="w-4.5 h-4.5" />
             </button>
           )}
-          {userRole !== 'requisitante' && !isAlmoxarife && (
+          {userRole === 'administrador' && (
+            <button 
+              className="flex items-center justify-center p-2.5 rounded-lg text-slate-700 bg-transparent hover:bg-slate-50 transition-colors"
+              title="Filtros"
+            >
+              <Filter className="w-4.5 h-4.5" />
+            </button>
+          )}
+          {userRole === 'almoxerife' && (
             <>
               <button 
                 className="flex items-center justify-center p-2.5 rounded-lg text-slate-700 bg-transparent hover:bg-slate-50 transition-colors"
