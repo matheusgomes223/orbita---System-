@@ -481,7 +481,7 @@ export function Entrada() {
                               <td className="py-3 px-4 text-right">
                                 <button 
                                   onClick={() => removeFromCart(item.id)}
-                                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
