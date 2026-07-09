@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<body>
+<svg viewBox="0 0 160 160" width="400" height="400" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(10, 10)">
+    <circle cx="70" cy="70" r="22" fill="#0C2340"/>
+    
+    <path id="orbit1" d="M 5,70 A 65,25 0 1,0 135,70 A 65,25 0 1,0 5,70" fill="none"/>
+    <path id="orbit2" d="M 5,70 A 65,25 0 1,0 135,70 A 65,25 0 1,0 5,70" fill="none"/>
+    
+    <ellipse cx="70" cy="70" rx="65" ry="25" transform="rotate(-35 70 70)" stroke="#0C2340" stroke-width="6" fill="none"/>
+    <ellipse cx="70" cy="70" rx="65" ry="25" transform="rotate(35 70 70)" stroke="#00B4F1" stroke-width="6" fill="none"/>
+
+    <g transform="rotate(-35 70 70)">
+      <circle r="7" fill="#F7A800">
+        <animateMotion dur="1.5s" repeatCount="indefinite">
+          <mpath href="#orbit1"/>
+        </animateMotion>
+      </circle>
+    </g>
+    
+    <g transform="rotate(35 70 70)">
+      <circle r="5" fill="#00B4F1">
+        <animateMotion dur="2s" repeatCount="indefinite">
+          <mpath href="#orbit2"/>
+        </animateMotion>
+      </circle>
+    </g>
+  </g>
+</svg>
+</body>
+</html>

@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<body>
+<svg viewBox="0 0 160 160" width="400" height="400" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .rocket-tail {
+      stroke-dasharray: 60 250;
+      animation: orbit 1.5s linear infinite;
+    }
+    .rocket-tail-2 {
+      stroke-dasharray: 60 250;
+      animation: orbit 2s linear infinite;
+      animation-direction: reverse;
+    }
+    @keyframes orbit {
+      0% { stroke-dashoffset: 310; }
+      100% { stroke-dashoffset: 0; }
+    }
+  </style>
+  <g transform="translate(10, 10)">
+    <circle cx="70" cy="70" r="22" fill="#0C2340"/>
+    
+    <!-- Background track (optional) -->
+    <ellipse cx="70" cy="70" rx="65" ry="25" transform="rotate(-35 70 70)" stroke="#0C2340" stroke-width="2" opacity="0.2"/>
+    <ellipse cx="70" cy="70" rx="65" ry="25" transform="rotate(35 70 70)" stroke="#00B4F1" stroke-width="2" opacity="0.2"/>
+    
+    <!-- Animated rocket tails -->
+    <ellipse class="rocket-tail" cx="70" cy="70" rx="65" ry="25" transform="rotate(-35 70 70)" stroke="#0C2340" stroke-width="6" stroke-linecap="round"/>
+    <ellipse class="rocket-tail-2" cx="70" cy="70" rx="65" ry="25" transform="rotate(35 70 70)" stroke="#00B4F1" stroke-width="6" stroke-linecap="round"/>
+    
+  </g>
+</svg>
+</body>
+</html>
