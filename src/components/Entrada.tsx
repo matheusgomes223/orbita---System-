@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, MoreVertical, X, Package, FileText, Check, AlertTriangle, Building, Tag, ChevronDown } from 'lucide-react';
+import { Search, Plus, MoreVertical, X, Package, FileText, Check, AlertTriangle, Building, Tag, ChevronDown, Download, ShoppingCart, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchDb, saveDb } from '../services/githubDb';
 
@@ -8,128 +8,124 @@ export function Entrada() {
   const [entradas, setEntradas] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Form State
-  const [formData, setFormData] = useState({
+  // Header Form State
+  const [headerData, setHeaderData] = useState({
     numDoc: '',
     notaFiscal: '',
-    fornecedor: '',
     pedidoCompra: '',
-    codigoItem: '',
-    descricao: '',
-    und: '',
-    quantidade: '',
-    valorTotal: '',
-    classificacao: '',
-    aplicacao: '',
-    patrimonio: '',
-    centroCusto: '',
+    fornecedor: '',
     projetoPep: '',
-    om: '',
     planejador: '',
     enderecoArmazenagem: '',
-    inventario: '',
-    divergente: false,
-    disponivel: false
+    patrimonio: '',
+    classificacao: 'C',
+    divergente: false
   });
 
+  // Shopping Cart State
+  const [cart, setCart] = useState<any[]>([]);
+  const [itemSearchValue, setItemSearchValue] = useState('');
+  const [allRegisteredItems, setAllRegisteredItems] = useState<any[]>([]);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
-  const [items, setItems] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadData() {
       const db = await fetchDb();
       setEntradas(db.entradas || []);
-      setItems(db.items || []);
+      setAllRegisteredItems(db.items || []);
     }
     loadData();
     window.addEventListener('storage', loadData);
     return () => window.removeEventListener('storage', loadData);
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleHeaderChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
-    
-    setFormData(prev => {
-      const updated = { ...prev, [name]: val };
-      
-      if (name === 'codigoItem' && value) {
-        const foundItem = items.find(
-          item => item.codigoSAP?.toUpperCase() === value.toUpperCase()
-        );
-        if (foundItem) {
-          updated.descricao = foundItem.descricao || '';
-          updated.und = foundItem.und || 'UN';
-        }
-      }
-      
-      return updated;
-    });
+    setHeaderData(prev => ({ ...prev, [name]: val }));
   };
 
-  const formatCurrency = (value: string) => {
-    let rawValue = value.replace(/\D/g, '');
-    if (rawValue === '') return '';
-    const numberValue = parseInt(rawValue, 10) / 100;
-    return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(numberValue);
+  // Filter items based on search input
+  const filteredSearchItems = itemSearchValue.trim() === '' 
+    ? [] 
+    : allRegisteredItems.filter(item => 
+        item.codigoSAP?.toLowerCase().includes(itemSearchValue.toLowerCase()) ||
+        item.descricao?.toLowerCase().includes(itemSearchValue.toLowerCase())
+      );
+
+  const addToCart = (item: any) => {
+    if (!cart.find(i => i.id === item.id)) {
+      setCart([...cart, { ...item, quantity: 1 }]);
+    }
+    setItemSearchValue('');
   };
 
-  const handleCurrencyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, valorTotal: formatCurrency(e.target.value) }));
+  const removeFromCart = (id: string) => {
+    setCart(cart.filter(i => i.id !== id));
+  };
+
+  const updateCartQuantity = (id: string, qty: number) => {
+    if (qty < 1) return;
+    setCart(cart.map(i => i.id === id ? { ...i, quantity: qty } : i));
   };
 
   const handleCadastrar = async () => {
-    if (!formData.numDoc || !formData.notaFiscal || !formData.codigoItem) {
-      alert('Por favor, preencha os campos obrigatórios (Num Doc, Nota Fiscal, Código do Item).');
+    if (!headerData.notaFiscal) {
+      alert('Por favor, preencha os campos obrigatórios (Nota Fiscal).');
+      return;
+    }
+    if (cart.length === 0) {
+      alert('Por favor, adicione pelo menos um item à entrada.');
       return;
     }
 
-    const novaEntrada = {
-      id: String(Date.now()),
-      numDoc: formData.numDoc,
-      notaFiscal: formData.notaFiscal,
-      fornecedor: formData.fornecedor || 'N/A',
-      codigoItem: formData.codigoItem,
-      descricao: formData.descricao || 'Item sem descrição',
-      quantidade: Number(formData.quantidade) || 0,
-      und: formData.und || 'UN',
-      data: new Date().toLocaleDateString('pt-BR'),
-      divergente: formData.divergente
-    };
-
-    const updatedEntradas = [novaEntrada, ...entradas];
-    setEntradas(updatedEntradas);
-
+    const docNum = headerData.numDoc || `DOC-${Math.floor(100000 + Math.random() * 900000)}`;
     const db = await fetchDb();
+    
+    // 1. Create entry records
+    const newEntries = cart.map(item => ({
+      id: `${Date.now()}-${item.id}`,
+      numDoc: docNum,
+      notaFiscal: headerData.notaFiscal,
+      fornecedor: headerData.fornecedor || 'N/A',
+      codigoItem: item.codigoSAP,
+      descricao: item.descricao,
+      quantidade: item.quantity,
+      und: item.und || 'UN',
+      data: new Date().toLocaleDateString('pt-BR'),
+      divergente: headerData.divergente
+    }));
+
+    const updatedEntradas = [...newEntries, ...entradas];
+    setEntradas(updatedEntradas);
     db.entradas = updatedEntradas;
 
-    // Also insert or update the item in the physical stock (estoque)
-    const valorFloat = parseFloat(formData.valorTotal.replace(/\./g, '').replace(',', '.')) || 0;
-    const novoEstoqueItem = {
-      id: String(Date.now()),
-      descricao: formData.descricao || 'Item sem descrição',
-      codigoItem: formData.codigoItem,
-      codigoSAP: formData.codigoItem,
-      saldo: Number(formData.quantidade) || 0,
+    // 2. Create physical inventory (estoque) records
+    const newEstoqueItems = cart.map(item => ({
+      id: `${Date.now()}-${item.id}-estoque`,
+      descricao: item.descricao,
+      codigoItem: item.codigoSAP,
+      codigoSAP: item.codigoSAP,
+      saldo: item.quantity,
       qtdRsv: 0,
-      disponivel: Number(formData.quantidade) || 0,
-      um: formData.und || 'UN',
-      endereco: formData.enderecoArmazenagem || '-',
-      abc: formData.classificacao || 'C',
-      planejador: formData.planejador || '-',
-      pedidoPo: formData.pedidoCompra || '-',
-      cCusto: formData.centroCusto || '-',
-      projeto: formData.projetoPep || '-',
-      valorTotal: valorFloat,
-      nfEntrada: formData.notaFiscal,
+      disponivel: item.quantity,
+      um: item.und || 'UN',
+      endereco: headerData.enderecoArmazenagem || '-',
+      abc: headerData.classificacao || 'C',
+      planejador: headerData.planejador || '-',
+      pedidoPo: headerData.pedidoCompra || '-',
+      cCusto: '-',
+      projeto: headerData.projetoPep || '-',
+      valorTotal: (item.valor || 0) * item.quantity,
+      nfEntrada: headerData.notaFiscal,
       dataEntrada: new Date().toLocaleDateString('pt-BR'),
       requisitante: '-',
-      areaDestino: formData.aplicacao || '-',
-      partNumber: '-',
-      regEntrada: formData.numDoc
-    };
+      areaDestino: '-',
+      partNumber: item.partNumber || '-',
+      regEntrada: docNum
+    }));
 
-    db.estoque = [novoEstoqueItem, ...(db.estoque || [])];
+    db.estoque = [...newEstoqueItems, ...(db.estoque || [])];
     await saveDb(db);
 
     closeModal();
@@ -137,11 +133,20 @@ export function Entrada() {
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setFormData({
-      numDoc: '', notaFiscal: '', fornecedor: '', pedidoCompra: '', codigoItem: '', descricao: '',
-      und: '', quantidade: '', valorTotal: '', classificacao: '', aplicacao: '', patrimonio: '',
-      centroCusto: '', projetoPep: '', om: '', planejador: '', enderecoArmazenagem: '', inventario: '', divergente: false, disponivel: false
+    setHeaderData({
+      numDoc: '',
+      notaFiscal: '',
+      pedidoCompra: '',
+      fornecedor: '',
+      projetoPep: '',
+      planejador: '',
+      enderecoArmazenagem: '',
+      patrimonio: '',
+      classificacao: 'C',
+      divergente: false
     });
+    setCart([]);
+    setItemSearchValue('');
   };
 
   const filteredEntradas = entradas.filter(entrada => {
@@ -226,15 +231,21 @@ export function Entrada() {
                         onClick={() => setOpenDropdownId(null)}
                       />
                       <div className="absolute right-8 top-8 w-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50">
-                        <button className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
-                          <FileText className="w-4 h-4" /> Detalhes
-                        </button>
+                        <div className="px-4 py-2 text-xs text-slate-400 font-bold border-b border-slate-100">Quantidade</div>
+                        <div className="px-4 py-2 text-sm text-slate-700 font-mono font-bold">{entrada.quantidade} {entrada.und}</div>
                       </div>
                     </>
                   )}
                 </td>
               </tr>
             ))}
+            {filteredEntradas.length === 0 && (
+              <tr>
+                <td colSpan={7} className="py-12 text-center text-slate-400">
+                  Nenhuma entrada registrada.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -255,187 +266,265 @@ export function Entrada() {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden pointer-events-auto w-full max-w-3xl max-h-full"
+                className="bg-white rounded-2xl shadow-xl flex flex-col overflow-hidden pointer-events-auto w-full max-w-4xl max-h-[92vh]"
               >
                 {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
                   <div>
                     <h2 className="text-xl font-bold text-slate-800">Nova Entrada de Material</h2>
-                    <p className="text-sm text-slate-500">Preencha os dados para registrar uma nova entrada no estoque.</p>
+                    <p className="text-sm text-slate-500 mt-0.5">Preencha a documentação e adicione os itens ao carrinho de entrada.</p>
                   </div>
+                  <button 
+                    onClick={closeModal}
+                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                <button 
-                  onClick={closeModal}
-                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
 
-              {/* Modal Body */}
-              <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
-                <div className="space-y-8">
+                {/* Modal Body */}
+                <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30 space-y-6">
                   
-                  {/* Seção 1: Documentos e Dados Base */}
-                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-slate-100 pb-2">
-                      Documentação
+                  {/* Seção 1: Documentação e Informações Base */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider border-b border-slate-100 pb-2">
+                      DOCUMENTAÇÃO E INFORMAÇÕES
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                       <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Nota Fiscal <span className="text-rose-500">*</span></label>
-                        <input name="notaFiscal" value={formData.notaFiscal} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent font-mono" placeholder="Ex: NF-001928" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Pedido de Compra</label>
-                        <input name="pedidoCompra" value={formData.pedidoCompra} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent font-mono" placeholder="Ex: PO-4592" />
-                      </div>
-                      <div className="md:col-span-2">
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Fornecedor</label>
-                        <input name="fornecedor" value={formData.fornecedor} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent" placeholder="Nome do fornecedor" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Seção 2: Dados do Material */}
-                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-slate-100 pb-2">
-                      Material
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Código SAP <span className="text-rose-500">*</span></label>
-                        <input name="codigoItem" value={formData.codigoItem} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent font-mono" placeholder="SAP-XXXX" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Descrição do Item</label>
-                        <input name="descricao" value={formData.descricao} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent" placeholder="Descrição completa" />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Unidade</label>
-                        <div className="relative">
-                          <select name="und" value={formData.und} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent bg-white appearance-none cursor-pointer pr-10">
-                            <option value="">Selecione...</option>
-                            <option value="UN">UN - Unidade</option>
-                            <option value="KG">KG - Quilograma</option>
-                            <option value="M">M - Metro</option>
-                            <option value="CX">CX - Caixa</option>
-                            <option value="PC">PC - Peça</option>
-                            <option value="L">L - Litro</option>
-                          </select>
-                          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
-                            <ChevronDown className="w-4 h-4" />
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Quantidade</label>
-                        <input name="quantidade" value={formData.quantidade} onChange={handleInputChange} type="number" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent" placeholder="0" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Valor Total (R$)</label>
-                        <input name="valorTotal" value={formData.valorTotal} onChange={handleCurrencyChange} type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent" placeholder="R$ 0,00" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Classificação</label>
-                        <input name="classificacao" value={formData.classificacao} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent" placeholder="Ex: Investimento" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Aplicação</label>
-                        <input name="aplicacao" value={formData.aplicacao} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent" placeholder="Onde será utilizado" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Patrimônio</label>
-                        <input name="patrimonio" value={formData.patrimonio} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent font-mono" placeholder="Nº Patrimônio" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Seção 3: Rastreabilidade e Logística */}
-                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                    <h3 className="text-sm font-semibold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2 border-b border-slate-100 pb-2">
-                      Alocação & Logística
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Projeto / PEP</label>
-                        <input name="projetoPep" value={formData.projetoPep} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent font-mono" placeholder="PRJ-XXXX" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Planejador</label>
-                        <input name="planejador" value={formData.planejador} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent" placeholder="Nome do planejador" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Endereço de Armaz.</label>
-                        <input name="enderecoArmazenagem" value={formData.enderecoArmazenagem} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent font-mono" placeholder="A1-02-03" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-600 mb-1.5 uppercase tracking-wider">Inventário</label>
-                        <input name="inventario" value={formData.inventario} onChange={handleInputChange} type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent" placeholder="Periódico, Rotativo..." />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Checkboxes Options */}
-                  <div className="space-y-4">
-                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                      <div className="flex items-center h-5">
-                        <input
-                          id="divergente"
-                          name="divergente"
-                          type="checkbox"
-                          checked={formData.divergente}
-                          onChange={handleInputChange}
-                          className="w-5 h-5 text-[#0C2340] bg-white border-slate-300 rounded focus:ring-[#0C2340] focus:ring-2 cursor-pointer"
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Nota Fiscal <span className="text-rose-500">*</span></label>
+                        <input 
+                          name="notaFiscal" 
+                          value={headerData.notaFiscal} 
+                          onChange={handleHeaderChange} 
+                          type="text" 
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340] font-mono" 
+                          placeholder="Ex: NF-001928" 
                         />
                       </div>
                       <div>
-                        <label htmlFor="divergente" className="text-sm font-semibold text-slate-800 cursor-pointer block">
-                          Marcar como Divergente
-                        </label>
-                      </div>
-                    </div>
-
-                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-                      <div className="flex items-center h-5">
-                        <input
-                          id="disponivel"
-                          name="disponivel"
-                          type="checkbox"
-                          checked={formData.disponivel}
-                          onChange={handleInputChange}
-                          className="w-5 h-5 text-[#0C2340] bg-white border-slate-300 rounded focus:ring-[#0C2340] focus:ring-2 cursor-pointer"
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Pedido de Compra</label>
+                        <input 
+                          name="pedidoCompra" 
+                          value={headerData.pedidoCompra} 
+                          onChange={handleHeaderChange} 
+                          type="text" 
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340] font-mono" 
+                          placeholder="Ex: PO-4592" 
                         />
                       </div>
                       <div>
-                        <label htmlFor="disponivel" className="text-sm font-semibold text-slate-800 cursor-pointer block">
-                          Disponível
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Fornecedor</label>
+                        <input 
+                          name="fornecedor" 
+                          value={headerData.fornecedor} 
+                          onChange={handleHeaderChange} 
+                          type="text" 
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340]" 
+                          placeholder="Nome do fornecedor" 
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Projeto PEP</label>
+                        <input 
+                          name="projetoPep" 
+                          value={headerData.projetoPep} 
+                          onChange={handleHeaderChange} 
+                          type="text" 
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340] font-mono" 
+                          placeholder="Ex: C018317" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Planejador</label>
+                        <input 
+                          name="planejador" 
+                          value={headerData.planejador} 
+                          onChange={handleHeaderChange} 
+                          type="text" 
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340]" 
+                          placeholder="Nome do planejador" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Endereço de Armaz.</label>
+                        <input 
+                          name="enderecoArmazenagem" 
+                          value={headerData.enderecoArmazenagem} 
+                          onChange={handleHeaderChange} 
+                          type="text" 
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340] font-mono" 
+                          placeholder="Ex: A-01-01" 
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Patrimônio</label>
+                        <input 
+                          name="patrimonio" 
+                          value={headerData.patrimonio} 
+                          onChange={handleHeaderChange} 
+                          type="text" 
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340]" 
+                          placeholder="Nº Patrimônio" 
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Classificação ABC</label>
+                        <select 
+                          name="classificacao" 
+                          value={headerData.classificacao} 
+                          onChange={handleHeaderChange} 
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340] cursor-pointer"
+                        >
+                          <option value="A">A (Alto valor / Importância)</option>
+                          <option value="B">B (Médio valor)</option>
+                          <option value="C">C (Baixo valor / Consumo)</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center pt-6">
+                        <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+                          <input 
+                            type="checkbox" 
+                            name="divergente" 
+                            checked={headerData.divergente} 
+                            onChange={handleHeaderChange}
+                            className="w-4 h-4 rounded border-slate-300 text-[#0C2340] focus:ring-[#0C2340]" 
+                          />
+                          Entrada Divergente
                         </label>
                       </div>
                     </div>
                   </div>
 
+                  {/* Seção 2: Carrinho de Materiais */}
+                  <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6">
+                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider border-b border-slate-100 pb-2">
+                      ITENS DA ENTRADA
+                    </h3>
+
+                    {/* Search Field */}
+                    <div className="relative">
+                      <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                      <input 
+                        type="text"
+                        value={itemSearchValue}
+                        onChange={(e) => setItemSearchValue(e.target.value)}
+                        placeholder="Buscar item por código SAP ou descrição..."
+                        className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:bg-white focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340] transition-all"
+                      />
+
+                      {/* Dropdown Results */}
+                      <AnimatePresence>
+                        {filteredSearchItems.length > 0 && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 5 }}
+                            className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden py-1 max-h-60 overflow-y-auto"
+                          >
+                            {filteredSearchItems.map(item => (
+                              <div 
+                                key={item.id}
+                                onClick={() => addToCart(item)}
+                                className="px-4 py-2 hover:bg-slate-50 cursor-pointer flex items-center justify-between transition-colors border-b border-slate-50 last:border-0"
+                              >
+                                <div>
+                                  <p className="text-sm font-bold text-slate-800">{item.descricao}</p>
+                                  <p className="text-xs text-slate-400 font-mono mt-0.5">{item.codigoSAP} | Part: {item.partNumber || '-'}</p>
+                                </div>
+                                <span className="text-xs font-bold bg-[#00B4F1]/10 text-[#00B4F1] px-2 py-0.5 rounded-full">{item.und}</span>
+                              </div>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Cart Items Table */}
+                    <div className="border border-slate-100 rounded-xl overflow-hidden bg-slate-50/20">
+                      <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-100">
+                          <tr>
+                            <th className="py-3 px-4">Código SAP</th>
+                            <th className="py-3 px-4">Descrição</th>
+                            <th className="py-3 px-4 text-center w-36">Quantidade</th>
+                            <th className="py-3 px-4 text-right w-16">Ação</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {cart.map(item => (
+                            <tr key={item.id} className="hover:bg-white transition-colors">
+                              <td className="py-3 px-4 font-mono font-bold text-slate-600">{item.codigoSAP}</td>
+                              <td className="py-3 px-4 font-semibold text-slate-800">{item.descricao}</td>
+                              <td className="py-2 px-4 text-center">
+                                <div className="inline-flex items-center bg-slate-100 border border-slate-200 rounded-lg p-1">
+                                  <button 
+                                    onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                                    className="w-7 h-7 rounded-md bg-white hover:bg-slate-50 text-slate-600 font-bold flex items-center justify-center transition-colors shadow-sm active:scale-95"
+                                  >
+                                    -
+                                  </button>
+                                  <input 
+                                    type="number"
+                                    min="1"
+                                    value={item.quantity}
+                                    onChange={(e) => updateCartQuantity(item.id, Number(e.target.value))}
+                                    className="w-12 text-center bg-transparent border-0 outline-none text-sm font-bold text-slate-800 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  />
+                                  <button 
+                                    onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                                    className="w-7 h-7 rounded-md bg-white hover:bg-slate-50 text-slate-600 font-bold flex items-center justify-center transition-colors shadow-sm active:scale-95"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-right">
+                                <button 
+                                  onClick={() => removeFromCart(item.id)}
+                                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                          {cart.length === 0 && (
+                            <tr>
+                              <td colSpan={4} className="py-12 text-center text-slate-400">
+                                <ShoppingCart className="w-8 h-8 mx-auto mb-3 text-slate-300" />
+                                <p className="font-semibold text-sm">Carrinho de entrada vazio</p>
+                                <p className="text-xs text-slate-400 mt-1">Busque e adicione itens para registrar a entrada.</p>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Modal Footer */}
-              <div className="flex items-center justify-end gap-3 p-6 border-t border-slate-100 bg-white">
-                <button 
-                  onClick={closeModal}
-                  className="px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  onClick={handleCadastrar}
-                  className="px-6 py-2.5 bg-[#0C2340] hover:bg-[#0a1d36] text-white rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2"
-                >
-                  <Check className="w-4 h-4" /> Registrar Entrada
-                </button>
-              </div>
-            </motion.div>
+                {/* Modal Footer */}
+                <div className="p-6 border-t border-slate-200 bg-white flex justify-end gap-3">
+                  <button 
+                    onClick={closeModal}
+                    className="px-5 py-2.5 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors shadow-sm"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    onClick={handleCadastrar}
+                    disabled={cart.length === 0}
+                    className="px-6 py-2.5 bg-[#0C2340] hover:bg-[#0a1d36] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors shadow-sm flex items-center gap-2"
+                  >
+                    <Check className="w-4 h-4" />
+                    Registrar Entrada
+                  </button>
+                </div>
+              </motion.div>
             </div>
           </>
         )}
