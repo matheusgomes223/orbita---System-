@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, MoreVertical, X, Package, FileText, Check, AlertTriangle, Building, Tag, ChevronDown, Download, ShoppingCart, Trash2 } from 'lucide-react';
+import { Search, Plus, MoreVertical, X, Package, FileText, Check, AlertTriangle, Building, Tag, ChevronDown, Download, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchDb, saveDb } from '../services/githubDb';
 
@@ -18,7 +18,7 @@ export function Entrada() {
     planejador: '',
     enderecoArmazenagem: '',
     patrimonio: '',
-    classificacao: 'C',
+    classificacao: 'Investimento',
     divergente: false
   });
 
@@ -111,7 +111,7 @@ export function Entrada() {
       disponivel: item.quantity,
       um: item.und || 'UN',
       endereco: headerData.enderecoArmazenagem || '-',
-      abc: headerData.classificacao || 'C',
+      abc: headerData.classificacao || 'Investimento',
       planejador: headerData.planejador || '-',
       pedidoPo: headerData.pedidoCompra || '-',
       cCusto: '-',
@@ -372,17 +372,13 @@ export function Entrada() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Classificação ABC</label>
-                        <select 
-                          name="classificacao" 
-                          value={headerData.classificacao} 
-                          onChange={handleHeaderChange} 
-                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340] cursor-pointer"
-                        >
-                          <option value="A">A (Alto valor / Importância)</option>
-                          <option value="B">B (Médio valor)</option>
-                          <option value="C">C (Baixo valor / Consumo)</option>
-                        </select>
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Classificação</label>
+                        <input 
+                          type="text" 
+                          value="Investimento" 
+                          disabled 
+                          className="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-500 cursor-not-allowed font-medium" 
+                        />
                       </div>
                       <div className="flex items-center pt-6">
                         <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
@@ -495,7 +491,6 @@ export function Entrada() {
                           {cart.length === 0 && (
                             <tr>
                               <td colSpan={4} className="py-12 text-center text-slate-400">
-                                <ShoppingCart className="w-8 h-8 mx-auto mb-3 text-slate-300" />
                                 <p className="font-semibold text-sm">Carrinho de entrada vazio</p>
                                 <p className="text-xs text-slate-400 mt-1">Busque e adicione itens para registrar a entrada.</p>
                               </td>
