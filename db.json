@@ -55,6 +55,31 @@
   ],
   "requisicoes": [
     {
+      "id": "1783689927054",
+      "requisicao": "REQ-2094",
+      "requisitante": "Marcelo",
+      "matricula": "98120",
+      "projetoDestino": "90909944",
+      "localDestino": "Marcos silva",
+      "tipoSaida": "BALCÃO CMP",
+      "statusAprovacao": "Aguardando",
+      "statusLogistico": "Aguardando",
+      "dataDesejada": "10/07/2026",
+      "detalhesAprovador": {
+        "nome": "Roberto Costa",
+        "cargo": "Gerente de Manutenção",
+        "dataSolicitacao": "10/07/2026 às 10:25"
+      },
+      "itens": [
+        {
+          "codigo": "002",
+          "descricao": "MOUSE",
+          "quantidade": 1000,
+          "endereco": "A1"
+        }
+      ]
+    },
+    {
       "id": "1783689105672",
       "requisicao": "REQ-3732",
       "requisitante": "João Silva",
@@ -132,5 +157,5 @@
       "status": "Projeto"
     }
   ],
-  "lastUpdated": 1783689105682
+  "lastUpdated": 1783689927055
 }
