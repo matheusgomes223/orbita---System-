@@ -37,6 +37,19 @@
   "requisitantes": [],
   "entradas": [
     {
+      "id": "1783690446327-1783690407692",
+      "numDoc": "DOC-112953",
+      "notaFiscal": "000000",
+      "fornecedor": "KKK",
+      "codigoItem": "1503",
+      "codigoSAP": "2",
+      "descricao": "TABLET",
+      "quantidade": 10,
+      "und": "M",
+      "data": "10/07/2026",
+      "divergente": false
+    },
+    {
       "id": "1783687592165-1783687545030",
       "numDoc": "DOC-406137",
       "notaFiscal": "0000000000",
@@ -117,6 +130,31 @@
   ],
   "estoque": [
     {
+      "id": "1783690446327-1783690407692-estoque",
+      "descricao": "TABLET",
+      "codigoItem": "1503",
+      "codigoSAP": "2",
+      "saldo": 10,
+      "qtdRsv": 0,
+      "disponivel": 10,
+      "um": "M",
+      "endereco": "a2-34",
+      "abc": "Investimento",
+      "planejador": "Lucas",
+      "pedidoPo": "123455",
+      "cCusto": "-",
+      "projeto": "127673",
+      "valorTotal": 111111.1,
+      "nfEntrada": "000000",
+      "dataEntrada": "10/07/2026",
+      "requisitante": "-",
+      "areaDestino": "-",
+      "partNumber": "1245",
+      "regEntrada": "DOC-112953",
+      "patrimonio": "09098874",
+      "status": "Projeto"
+    },
+    {
       "id": "1783687592165-1783687545030-estoque",
       "descricao": "MOUSE",
       "codigoItem": "1502",
@@ -167,5 +205,5 @@
       "status": "Projeto"
     }
   ],
-  "lastUpdated": 1783690407697
+  "lastUpdated": 1783690446327
 }
