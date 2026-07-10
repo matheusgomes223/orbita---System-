@@ -15,8 +15,47 @@
   "planejadores": [],
   "projetos": [],
   "requisitantes": [],
-  "entradas": [],
+  "entradas": [
+    {
+      "id": "1783682998989-1783682800495",
+      "numDoc": "DOC-917101",
+      "notaFiscal": "0909123",
+      "fornecedor": "123456",
+      "codigoItem": "1501",
+      "codigoSAP": "00",
+      "descricao": "ATARKE",
+      "quantidade": 12,
+      "und": "UN",
+      "data": "10/07/2026",
+      "divergente": false
+    }
+  ],
   "requisicoes": [],
-  "estoque": [],
-  "lastUpdated": 1783682895525
+  "estoque": [
+    {
+      "id": "1783682998989-1783682800495-estoque",
+      "descricao": "ATARKE",
+      "codigoItem": "1501",
+      "codigoSAP": "00",
+      "saldo": 12,
+      "qtdRsv": 0,
+      "disponivel": 12,
+      "um": "UN",
+      "endereco": "A1",
+      "abc": "Investimento",
+      "planejador": "Marcos ",
+      "pedidoPo": "-",
+      "cCusto": "-",
+      "projeto": "343566",
+      "valorTotal": 12000,
+      "nfEntrada": "0909123",
+      "dataEntrada": "10/07/2026",
+      "requisitante": "-",
+      "areaDestino": "-",
+      "partNumber": "23456",
+      "regEntrada": "DOC-917101",
+      "patrimonio": "909865"
+    }
+  ],
+  "lastUpdated": 1783682998989
 }
