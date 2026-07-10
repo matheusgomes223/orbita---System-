@@ -2,6 +2,16 @@
   "enderecos": [],
   "items": [
     {
+      "id": "1783694604841",
+      "codigoItem": "1504",
+      "codigoSAP": "35001678",
+      "partNumber": "KS-M-90889",
+      "descricao": "PORCA 3X1",
+      "und": "CJ",
+      "valor": 20,
+      "foto": null
+    },
+    {
       "id": "1783690407692",
       "codigoItem": "1503",
       "codigoSAP": "2",
@@ -230,5 +240,5 @@
       "status": "Projeto"
     }
   ],
-  "lastUpdated": 1783691054195
+  "lastUpdated": 1783694604848
 }
