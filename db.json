@@ -2,6 +2,16 @@
   "enderecos": [],
   "items": [
     {
+      "id": "1783690407692",
+      "codigoItem": "1503",
+      "codigoSAP": "2",
+      "partNumber": "1245",
+      "descricao": "TABLET",
+      "und": "M",
+      "valor": 11111.11,
+      "foto": null
+    },
+    {
       "id": "1783687545030",
       "codigoItem": "1502",
       "codigoSAP": "002",
@@ -157,5 +167,5 @@
       "status": "Projeto"
     }
   ],
-  "lastUpdated": 1783689927055
+  "lastUpdated": 1783690407697
 }
