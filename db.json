@@ -177,7 +177,7 @@
       "partNumber": "1245",
       "regEntrada": "DOC-112953",
       "patrimonio": "09098874",
-      "status": "Projeto"
+      "status": "Disponível"
     },
     {
       "id": "1783687592165-1783687545030-estoque",
@@ -230,5 +230,5 @@
       "status": "Projeto"
     }
   ],
-  "lastUpdated": 1783690542975
+  "lastUpdated": 1783691034976
 }
