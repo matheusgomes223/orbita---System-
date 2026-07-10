@@ -53,7 +53,33 @@
       "divergente": false
     }
   ],
-  "requisicoes": [],
+  "requisicoes": [
+    {
+      "id": "1783689105672",
+      "requisicao": "REQ-3732",
+      "requisitante": "João Silva",
+      "matricula": "98120",
+      "projetoDestino": "343566",
+      "localDestino": "Matheus ",
+      "tipoSaida": "BALCÃO CMP",
+      "statusAprovacao": "Aguardando",
+      "statusLogistico": "Aguardando",
+      "dataDesejada": "10/07/2026",
+      "detalhesAprovador": {
+        "nome": "Roberto Costa",
+        "cargo": "Gerente de Manutenção",
+        "dataSolicitacao": "10/07/2026 às 10:11"
+      },
+      "itens": [
+        {
+          "codigo": "00",
+          "descricao": "ATARKE",
+          "quantidade": 12,
+          "endereco": "A1"
+        }
+      ]
+    }
+  ],
   "estoque": [
     {
       "id": "1783687592165-1783687545030-estoque",
@@ -106,5 +132,5 @@
       "status": "Projeto"
     }
   ],
-  "lastUpdated": 1783687592165
+  "lastUpdated": 1783689105682
 }
