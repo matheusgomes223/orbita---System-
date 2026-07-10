@@ -2,8 +2,8 @@
   "enderecos": [],
   "items": [
     {
-      "id": "1783682798583",
-      "codigoItem": "1500",
+      "id": "1783682800495",
+      "codigoItem": "1501",
       "codigoSAP": "00",
       "partNumber": "23456",
       "descricao": "ATARKE",
@@ -18,5 +18,5 @@
   "entradas": [],
   "requisicoes": [],
   "estoque": [],
-  "lastUpdated": 1783682798592
+  "lastUpdated": 1783682807006
 }
