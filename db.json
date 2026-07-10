@@ -2,6 +2,16 @@
   "enderecos": [],
   "items": [
     {
+      "id": "1783687545030",
+      "codigoItem": "1502",
+      "codigoSAP": "002",
+      "partNumber": "8898",
+      "descricao": "MOUSE",
+      "und": "UN",
+      "valor": 100,
+      "foto": null
+    },
+    {
       "id": "1783682800495",
       "codigoItem": "1501",
       "codigoSAP": "00",
@@ -58,5 +68,5 @@
       "status": "Projeto"
     }
   ],
-  "lastUpdated": 1783687486857
+  "lastUpdated": 1783687545041
 }
