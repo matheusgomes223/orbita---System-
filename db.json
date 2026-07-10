@@ -27,6 +27,19 @@
   "requisitantes": [],
   "entradas": [
     {
+      "id": "1783687592165-1783687545030",
+      "numDoc": "DOC-406137",
+      "notaFiscal": "0000000000",
+      "fornecedor": "MMMM",
+      "codigoItem": "1502",
+      "codigoSAP": "002",
+      "descricao": "MOUSE",
+      "quantidade": 1000,
+      "und": "UN",
+      "data": "10/07/2026",
+      "divergente": false
+    },
+    {
       "id": "1783682998989-1783682800495",
       "numDoc": "DOC-917101",
       "notaFiscal": "0909123",
@@ -42,6 +55,31 @@
   ],
   "requisicoes": [],
   "estoque": [
+    {
+      "id": "1783687592165-1783687545030-estoque",
+      "descricao": "MOUSE",
+      "codigoItem": "1502",
+      "codigoSAP": "002",
+      "saldo": 1000,
+      "qtdRsv": 0,
+      "disponivel": 1000,
+      "um": "UN",
+      "endereco": "A1",
+      "abc": "Investimento",
+      "planejador": "Biru biru",
+      "pedidoPo": "00000000000",
+      "cCusto": "-",
+      "projeto": "90909944",
+      "valorTotal": 100000,
+      "nfEntrada": "0000000000",
+      "dataEntrada": "10/07/2026",
+      "requisitante": "-",
+      "areaDestino": "-",
+      "partNumber": "8898",
+      "regEntrada": "DOC-406137",
+      "patrimonio": "0909",
+      "status": "Disponível"
+    },
     {
       "id": "1783682998989-1783682800495-estoque",
       "descricao": "ATARKE",
@@ -68,5 +106,5 @@
       "status": "Projeto"
     }
   ],
-  "lastUpdated": 1783687545041
+  "lastUpdated": 1783687592165
 }
