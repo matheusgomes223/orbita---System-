@@ -78,6 +78,31 @@
   ],
   "requisicoes": [
     {
+      "id": "1783690542974",
+      "requisicao": "REQ-1453",
+      "requisitante": "João Silva",
+      "matricula": "98120",
+      "projetoDestino": "127673",
+      "localDestino": "Sem dados",
+      "tipoSaida": "BALCÃO CMP",
+      "statusAprovacao": "Aguardando",
+      "statusLogistico": "Aguardando",
+      "dataDesejada": "10/07/2026",
+      "detalhesAprovador": {
+        "nome": "Roberto Costa",
+        "cargo": "Gerente de Manutenção",
+        "dataSolicitacao": "10/07/2026 às 10:35"
+      },
+      "itens": [
+        {
+          "codigo": "2",
+          "descricao": "TABLET",
+          "quantidade": 10,
+          "endereco": "a2-34"
+        }
+      ]
+    },
+    {
       "id": "1783689927054",
       "requisicao": "REQ-2094",
       "requisitante": "Marcelo",
@@ -205,5 +230,5 @@
       "status": "Projeto"
     }
   ],
-  "lastUpdated": 1783690446327
+  "lastUpdated": 1783690542975
 }
