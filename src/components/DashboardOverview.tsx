@@ -130,8 +130,8 @@ export function DashboardOverview() {
           <div className="flex items-center gap-2 mb-8">
             <h3 className="text-lg font-bold text-[#0C2340]">Soma de Quantidade por Dia</h3>
           </div>
-          <div className="flex-1 w-full min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <div className="relative w-full h-[300px] flex-1">
+            <ResponsiveContainer width="100%" height={300} minWidth={0}>
               <BarChart data={dailyData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                 <XAxis 
@@ -166,8 +166,8 @@ export function DashboardOverview() {
           <div className="flex items-center gap-2 mb-8">
             <h3 className="text-lg font-bold text-[#0C2340]">Quantidade Recebida por PEP</h3>
           </div>
-          <div className="flex-1 w-full min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <div className="relative w-full h-[300px] flex-1">
+            <ResponsiveContainer width="100%" height={300} minWidth={0}>
               <BarChart data={pepData} layout="vertical" margin={{ top: 0, right: 40, left: 20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
                 <XAxis 

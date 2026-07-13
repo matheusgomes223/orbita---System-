@@ -12,11 +12,13 @@ export function CadastrarItem() {
   const [isUnidadeOpen, setIsUnidadeOpen] = useState(false);
   const [valorUnitario, setValorUnitario] = useState('');
   const [fotoMaterial, setFotoMaterial] = useState<string | null>(null);
+  const [codigoItem, setCodigoItem] = useState('');
   const [codigoSAP, setCodigoSAP] = useState('');
   const [partNumber, setPartNumber] = useState('');
   const [descricao, setDescricao] = useState('');
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -52,25 +54,41 @@ export function CadastrarItem() {
 
   const handleCadastrar = async () => {
     if (!codigoSAP || !descricao || !unidadeMedida || !valorUnitario) {
-      alert('Por favor, preencha os campos obrigatórios (Código SAP, Descrição, Unidade e Valor).');
+      setAlertMessage('Por favor, preencha os campos obrigatórios (Código SAP, Descrição, Unidade e Valor).');
       return;
     }
 
     const valorFloat = parseFloat(valorUnitario.replace(/\./g, '').replace(',', '.'));
 
-    const itemData = {
-      codigoSAP: codigoSAP.toUpperCase(),
-      partNumber: partNumber.toUpperCase(),
-      descricao: descricao.toUpperCase(),
-      und: unidadeMedida.toUpperCase(),
-      valor: valorFloat,
-      foto: fotoMaterial,
-    };
-
     let updated: any[] = [];
     if (editingItemId) {
+      const itemData = {
+        codigoItem: codigoItem.toUpperCase(),
+        codigoSAP: codigoSAP.toUpperCase(),
+        partNumber: partNumber.toUpperCase(),
+        descricao: descricao.toUpperCase(),
+        und: unidadeMedida.toUpperCase(),
+        valor: valorFloat,
+        foto: fotoMaterial,
+      };
       updated = items.map(item => item.id === editingItemId ? { ...item, ...itemData } : item);
     } else {
+      // Find maximum numeric code >= 1500
+      const existingCodes = items
+        .map(item => parseInt(item.codigoItem, 10))
+        .filter(num => !isNaN(num) && num >= 1500);
+      const nextCode = existingCodes.length > 0 ? Math.max(...existingCodes) + 1 : 1500;
+
+      const itemData = {
+        codigoItem: String(nextCode),
+        codigoSAP: codigoSAP.toUpperCase(),
+        partNumber: partNumber.toUpperCase(),
+        descricao: descricao.toUpperCase(),
+        und: unidadeMedida.toUpperCase(),
+        valor: valorFloat,
+        foto: fotoMaterial,
+      };
+
       const newItem = {
         id: String(Date.now()),
         ...itemData
@@ -79,14 +97,15 @@ export function CadastrarItem() {
     }
     setItems(updated);
 
-    const db = await fetchDb();
+    const db = await fetchDb(false, true);
     db.items = updated;
-    await saveDb(db);
+    saveDb(db); // Sync to GitHub in the background asynchronously
 
     closeModal();
   };
 
   const handleEdit = (item: typeof items[0]) => {
+    setCodigoItem(item.codigoItem || '');
     setCodigoSAP(item.codigoSAP);
     setPartNumber(item.partNumber);
     setDescricao(item.descricao);
@@ -102,9 +121,9 @@ export function CadastrarItem() {
     const updated = items.filter(item => item.id !== id);
     setItems(updated);
 
-    const db = await fetchDb();
+    const db = await fetchDb(false, true);
     db.items = updated;
-    await saveDb(db);
+    saveDb(db);
 
     setOpenDropdownId(null);
   };
@@ -112,6 +131,7 @@ export function CadastrarItem() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingItemId(null);
+    setCodigoItem('');
     setCodigoSAP('');
     setPartNumber('');
     setDescricao('');
@@ -127,7 +147,24 @@ export function CadastrarItem() {
     { value: 'l', label: 'Litro (L)' },
     { value: 'cx', label: 'Caixa (CX)' },
     { value: 'cj', label: 'Conjunto (CJ)' },
+    { value: 'pc', label: 'Peça (PC)' },
+    { value: 'rolo', label: 'Rolo (RL)' },
   ];
+
+  const getFullUnitName = (und: string) => {
+    const map: Record<string, string> = {
+      'UN': 'Unidade',
+      'KG': 'Quilograma',
+      'M': 'Metro',
+      'L': 'Litro',
+      'CX': 'Caixa',
+      'CJ': 'Conjunto',
+      'PC': 'Peça',
+      'RL': 'Rolo',
+      'ROLO': 'Rolo'
+    };
+    return map[und?.toUpperCase()] || und;
+  };
 
   const filteredItems = items.filter(item => {
     const searchLower = searchTerm.toLowerCase();
@@ -147,25 +184,26 @@ export function CadastrarItem() {
             placeholder="Buscar item..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all"
+            className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-transparent transition-all"
           />
         </div>
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-[#3B82F6] hover:bg-[#2563EB] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          className="flex items-center gap-2 bg-[#3B82F6] hover:bg-[#3B82F6]/90 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
         >
           <Plus className="w-4 h-4" />
-          Cadastrar
+          Cadastrar Novo
         </button>
       </div>
 
       {/* Table */}
       <div className="flex-1 overflow-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse whitespace-nowrap min-w-max">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
-              <th className="p-4 w-24 text-center">Foto</th>
-              <th className="p-4">Descrição do Material</th>
+            <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold sticky top-0 z-10">
+              <th className="p-4 w-20 text-center">Imagem</th>
+              <th className="p-4 min-w-[200px]">Descrição</th>
+              <th className="p-4">Código Item</th>
               <th className="p-4">Código SAP</th>
               <th className="p-4">Part Number</th>
               <th className="p-4">Und. Medida</th>
@@ -177,7 +215,7 @@ export function CadastrarItem() {
             {filteredItems.map((item) => (
               <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
                 <td className="p-4 text-center">
-                  <div className="w-16 h-16 rounded-lg bg-slate-100 flex items-center justify-center border border-slate-200 text-slate-400 mx-auto overflow-hidden">
+                  <div className="w-16 h-16 bg-slate-100 flex items-center justify-center text-slate-400 mx-auto overflow-hidden">
                     {item.foto ? (
                       <img src={item.foto} alt="Material" className="w-full h-full object-cover" />
                     ) : (
@@ -186,13 +224,14 @@ export function CadastrarItem() {
                   </div>
                 </td>
                 <td className="p-4 font-medium text-slate-700">{item.descricao}</td>
+                <td className="p-4 font-medium text-slate-500 font-mono text-xs">{item.codigoItem || '-'}</td>
                 <td className="p-4 font-medium text-slate-900">
                   {item.codigoSAP}
                 </td>
                 <td className="p-4 text-slate-500">
                   {item.partNumber}
                 </td>
-                <td className="p-4 text-slate-600">{item.und}</td>
+                <td className="p-4 text-slate-600">{getFullUnitName(item.und)}</td>
                 <td className="p-4 text-slate-600">
                   {item.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </td>
@@ -443,14 +482,33 @@ export function CadastrarItem() {
                 </button>
                 <button 
                   onClick={handleCadastrar}
-                  className="flex-1 px-4 py-2 bg-[#3B82F6] text-white rounded-lg text-sm font-medium hover:bg-[#2563EB] transition-colors flex items-center justify-center gap-2"
+                  className="flex-1 px-4 py-2 bg-[#3B82F6] hover:bg-[#2563EB] text-white rounded-lg text-sm font-medium transition-colors"
                 >
-                  <Check className="w-4 h-4" />
                   Cadastrar
                 </button>
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Custom Toast Alert */}
+      <AnimatePresence>
+        {alertMessage && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] bg-[#0C2340] border border-slate-700/50 text-white px-6 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 max-w-md w-[90vw]"
+          >
+            <p className="text-sm font-semibold flex-1 leading-snug">{alertMessage}</p>
+            <button 
+              onClick={() => setAlertMessage(null)} 
+              className="text-slate-400 hover:text-white transition-colors p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

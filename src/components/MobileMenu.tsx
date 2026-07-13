@@ -19,8 +19,8 @@ export function MobileMenu({ activeTab, onNavigate, userRole, userName, onLogout
   const isRequisitante = userRole === 'requisitante';
 
   const canAccessTab = (tab: string) => {
-    if (isAdministrador) return !['nova_requisicao', 'minhas_requisicoes', 'rastreio'].includes(tab);
-    if (isRequisitante) return ['nova_requisicao', 'minhas_requisicoes', 'rastreio', 'saldo_itens'].includes(tab);
+    if (isAdministrador) return !['nova_requisicao', 'minhas_requisicoes'].includes(tab);
+    if (isRequisitante) return ['nova_requisicao', 'minhas_requisicoes', 'saldo_itens'].includes(tab);
     if (isAlmoxarife) return ['requisicao', 'saldo_itens'].includes(tab);
     return false;
   };
@@ -40,7 +40,6 @@ export function MobileMenu({ activeTab, onNavigate, userRole, userName, onLogout
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'nova_requisicao', label: 'Nova Requisição', icon: Plus },
     { id: 'minhas_requisicoes', label: 'Minhas Requisições', icon: FileText },
-    { id: 'rastreio', label: 'Rastreio', icon: Search },
     { id: 'entrada', label: 'Entrada', icon: Package },
     { id: 'requisicao', label: 'Requisição', icon: Clock },
     { id: 'saldo_itens', label: 'Estoque', icon: Package },

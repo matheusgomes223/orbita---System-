@@ -6,3 +6,10 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Scratch scripts
+removeRequisitions.js
+resetDb.js
+testFetch.js
+CKTR LOGO.png
+Logo vale.png

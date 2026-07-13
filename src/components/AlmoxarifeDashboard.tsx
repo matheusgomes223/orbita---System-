@@ -21,7 +21,6 @@ import { Entrada } from './Entrada';
 import { Estoque } from './Estoque';
 import { Requisicao } from './Requisicao';
 import { NovaRequisicao } from './NovaRequisicao';
-import { Rastreio } from './Rastreio';
 import { DashboardOverview } from './DashboardOverview';
 import SignatureCanvas from 'react-signature-canvas';
 import metalPipesImg from '../assets/images/metal_pipes_1781574295664.jpg';
@@ -102,8 +101,8 @@ export function AlmoxarifeDashboard({ onLogout, userRole = 'almoxerife' }: { onL
   const isRequisitante = userRole === 'requisitante';
 
   const canAccessTab = (tab: string) => {
-    if (isAdministrador) return !['nova_requisicao', 'minhas_requisicoes', 'rastreio'].includes(tab);
-    if (isRequisitante) return ['nova_requisicao', 'minhas_requisicoes', 'rastreio', 'saldo_itens'].includes(tab);
+    if (isAdministrador) return !['nova_requisicao', 'minhas_requisicoes'].includes(tab);
+    if (isRequisitante) return ['nova_requisicao', 'minhas_requisicoes', 'saldo_itens'].includes(tab);
     if (isAlmoxarife) return ['requisicao', 'saldo_itens'].includes(tab);
     return false;
   };
@@ -217,18 +216,7 @@ export function AlmoxarifeDashboard({ onLogout, userRole = 'almoxerife' }: { onL
             </div>
           )}
 
-          {canAccessTab('rastreio') && (
-            <div className="mb-2">
-              <button 
-                onClick={() => setActiveTab('rastreio')}
-                className={`w-full flex items-center justify-center lg:justify-start gap-2 px-3 py-2.5 rounded-lg font-bold transition-colors text-sm ${
-                  activeTab === 'rastreio' ? 'bg-[#00B4F1]/10 text-[#0C2340]' : 'text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <span className="hidden lg:block flex-1 text-left">Rastreio</span>
-              </button>
-            </div>
-          )}
+
 
           {/* Movimentação (Removido agrupamento) */}
           {canAccessTab('entrada') && (
@@ -352,7 +340,7 @@ export function AlmoxarifeDashboard({ onLogout, userRole = 'almoxerife' }: { onL
         <div className="p-4 border-t border-slate-100">
           <div 
             onClick={() => setIsProfileModalOpen(true)}
-            className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-slate-50 rounded-lg transition-colors group"
+            className="flex items-center gap-3 px-3 py-2 cursor-pointer transition-colors group"
           >
             <div className="w-8 h-8 rounded-full bg-[#00B4F1]/10 text-[#00B4F1] flex items-center justify-center font-bold text-xs overflow-hidden border border-[#00B4F1]/20">
               {userProfilePic ? (
@@ -371,7 +359,7 @@ export function AlmoxarifeDashboard({ onLogout, userRole = 'almoxerife' }: { onL
                   e.stopPropagation();
                   onLogout();
                 }} 
-                className="text-slate-400 hover:text-red-500 transition-colors p-1 rounded hover:bg-slate-100"
+                className="text-slate-400 hover:text-red-500 transition-colors p-1"
                 title="Sair"
               >
                 <LogOut className="w-4 h-4" />
@@ -410,11 +398,9 @@ export function AlmoxarifeDashboard({ onLogout, userRole = 'almoxerife' }: { onL
             ) : activeTab === 'requisicao' ? (
               <Requisicao userRole={userRole} activeTab={activeTab} onNavigate={setActiveTab} userName={userName} onLogout={onLogout} />
             ) : activeTab === 'nova_requisicao' ? (
-              <NovaRequisicao onClose={() => setActiveTab('minhas_requisicoes')} />
+              <NovaRequisicao onClose={() => setActiveTab('minhas_requisicoes')} userName={userName} />
             ) : activeTab === 'minhas_requisicoes' ? (
               <Requisicao userRole={userRole} onNovaRequisicao={() => setActiveTab('nova_requisicao')} activeTab={activeTab} onNavigate={setActiveTab} userName={userName} onLogout={onLogout} />
-            ) : activeTab === 'rastreio' ? (
-              <Rastreio />
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-slate-400 bg-white border border-slate-200 rounded-xl shadow-sm p-12 flex-1">
                 <FolderCog className="w-16 h-16 mb-4 opacity-20" />

@@ -83,7 +83,7 @@ export function CadastrarPlanejador() {
 
       {/* Table */}
       <div className="flex-1 overflow-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse whitespace-nowrap min-w-max">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-semibold">
               <th className="px-6 py-5 w-48">Nome</th>

@@ -13,7 +13,6 @@ export function CadastrarProjeto() {
   const [nomeProjeto, setNomeProjeto] = useState('');
   const [implantador, setImplantador] = useState('');
   const [planejadores, setPlanejadores] = useState('');
-  const [notificacoes, setNotificacoes] = useState('');
 
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -42,8 +41,7 @@ export function CadastrarProjeto() {
         pepRaiz,
         nomeProjeto,
         implantador,
-        planejadores,
-        notificacoes
+        planejadores
       };
 
       let updated: any[] = [];
@@ -72,7 +70,6 @@ export function CadastrarProjeto() {
     setNomeProjeto(proj.nomeProjeto);
     setImplantador(proj.implantador || '');
     setPlanejadores(proj.planejadores || '');
-    setNotificacoes(proj.notificacoes || '');
     setEditingItemId(proj.id);
     setOpenDropdownId(null);
     setIsModalOpen(true);
@@ -96,7 +93,6 @@ export function CadastrarProjeto() {
     setNomeProjeto('');
     setImplantador('');
     setPlanejadores('');
-    setNotificacoes('');
     setEditingItemId(null);
   };
 
@@ -133,7 +129,6 @@ export function CadastrarProjeto() {
               <th className="px-6 py-5">Nome do Projeto</th>
               <th className="px-6 py-5">Implantador</th>
               <th className="px-6 py-5">Planejadores</th>
-              <th className="px-6 py-5">Notificações</th>
               <th className="px-6 py-5 w-16"></th>
             </tr>
           </thead>
@@ -154,9 +149,6 @@ export function CadastrarProjeto() {
                 </td>
                 <td className="px-6 py-5 text-slate-600">
                   {proj.planejadores || '-'}
-                </td>
-                <td className="px-6 py-5 text-slate-600">
-                  {proj.notificacoes || '-'}
                 </td>
                 <td className="px-6 py-5 text-center relative">
                   <button 
@@ -298,17 +290,6 @@ export function CadastrarProjeto() {
                       value={planejadores}
                       onChange={(e) => setPlanejadores(e.target.value)}
                       placeholder="Ex: Ana, Pedro"
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5 col-span-2">
-                    <label className="text-sm font-medium text-slate-700">Notificações</label>
-                    <input 
-                      type="text" 
-                      value={notificacoes}
-                      onChange={(e) => setNotificacoes(e.target.value)}
-                      placeholder="Ex: Email, SMS"
                       className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#3B82F6] focus:ring-1 focus:ring-[#3B82F6] transition-all"
                     />
                   </div>

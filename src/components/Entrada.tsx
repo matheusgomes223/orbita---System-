@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, MoreVertical, X, Package, FileText, Check, AlertTriangle, Building, Tag, ChevronDown, Download, Trash2 } from 'lucide-react';
+import { Search, Plus, MoreVertical, X, Package, FileText, Check, AlertTriangle, Building, Tag, ChevronDown, Download, Trash2, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { fetchDb, saveDb } from '../services/githubDb';
 
@@ -19,7 +19,8 @@ export function Entrada() {
     enderecoArmazenagem: '',
     patrimonio: '',
     classificacao: 'Investimento',
-    divergente: false
+    divergente: false,
+    status: 'Disponível'
   });
 
   // Shopping Cart State
@@ -27,12 +28,24 @@ export function Entrada() {
   const [itemSearchValue, setItemSearchValue] = useState('');
   const [allRegisteredItems, setAllRegisteredItems] = useState<any[]>([]);
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
+  const [editingNumDoc, setEditingNumDoc] = useState<string | null>(null);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<string | null>(null);
+  const [allRegisteredProjects, setAllRegisteredProjects] = useState<any[]>([]);
+  const [showProjectSuggestions, setShowProjectSuggestions] = useState(false);
+  const [allRegisteredPlanners, setAllRegisteredPlanners] = useState<any[]>([]);
+  const [showPlannerSuggestions, setShowPlannerSuggestions] = useState(false);
+  const [allRegisteredAddresses, setAllRegisteredAddresses] = useState<any[]>([]);
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
 
   useEffect(() => {
     async function loadData() {
       const db = await fetchDb();
       setEntradas(db.entradas || []);
       setAllRegisteredItems(db.items || []);
+      setAllRegisteredProjects(db.projetos || []);
+      setAllRegisteredPlanners(db.planejadores || []);
+      setAllRegisteredAddresses(db.enderecos || []);
     }
     loadData();
     window.addEventListener('storage', loadData);
@@ -48,9 +61,41 @@ export function Entrada() {
   // Filter items based on search input
   const filteredSearchItems = itemSearchValue.trim() === '' 
     ? [] 
-    : allRegisteredItems.filter(item => 
-        item.codigoSAP?.toLowerCase().includes(itemSearchValue.toLowerCase()) ||
-        item.descricao?.toLowerCase().includes(itemSearchValue.toLowerCase())
+    : allRegisteredItems.filter(item => {
+        // Skip items that are already in the cart
+        if (cart.some(cartItem => cartItem.id === item.id)) {
+          return false;
+        }
+        return (
+          item.codigoSAP?.toLowerCase().includes(itemSearchValue.toLowerCase()) ||
+          item.codigoItem?.toLowerCase().includes(itemSearchValue.toLowerCase()) ||
+          item.descricao?.toLowerCase().includes(itemSearchValue.toLowerCase())
+        );
+      });
+
+  // Filter projects based on search input
+  const filteredProjects = headerData.projetoPep.trim() === ''
+    ? []
+    : allRegisteredProjects.filter(p =>
+        p.elementoPep?.toLowerCase().includes(headerData.projetoPep.toLowerCase()) ||
+        p.nomeProjeto?.toLowerCase().includes(headerData.projetoPep.toLowerCase())
+      );
+
+  // Filter planners based on search input
+  const filteredPlanners = headerData.planejador.trim() === ''
+    ? []
+    : allRegisteredPlanners.filter(p =>
+        p.nome?.toLowerCase().includes(headerData.planejador.toLowerCase()) ||
+        p.email?.toLowerCase().includes(headerData.planejador.toLowerCase())
+      );
+
+  // Filter storage addresses based on search input
+  const filteredAddresses = headerData.enderecoArmazenagem.trim() === ''
+    ? []
+    : allRegisteredAddresses.filter(a =>
+        a.codigo?.toLowerCase().includes(headerData.enderecoArmazenagem.toLowerCase()) ||
+        a.local?.toLowerCase().includes(headerData.enderecoArmazenagem.toLowerCase()) ||
+        a.descricao?.toLowerCase().includes(headerData.enderecoArmazenagem.toLowerCase())
       );
 
   const addToCart = (item: any) => {
@@ -69,18 +114,67 @@ export function Entrada() {
     setCart(cart.map(i => i.id === id ? { ...i, quantity: qty } : i));
   };
 
+  const handleStartEdit = async (entrada: any) => {
+    setOpenDropdownId(null);
+    const db = await fetchDb();
+    
+    // Find all entries sharing the same numDoc
+    const groupEntries = (db.entradas || []).filter((e: any) => e.numDoc === entrada.numDoc);
+    
+    // Find matching estoque item to get header info
+    const relatedEstoque = (db.estoque || []).find((est: any) => est.regEntrada === entrada.numDoc);
+    
+    // Populate header info
+    setHeaderData({
+      numDoc: entrada.numDoc,
+      notaFiscal: entrada.notaFiscal,
+      pedidoCompra: relatedEstoque?.pedidoPo || '',
+      fornecedor: entrada.fornecedor || '',
+      projetoPep: relatedEstoque?.projeto || '',
+      planejador: relatedEstoque?.planejador || '',
+      enderecoArmazenagem: relatedEstoque?.endereco || '',
+      patrimonio: relatedEstoque?.patrimonio || '',
+      classificacao: relatedEstoque?.abc || 'Investimento',
+      divergente: entrada.divergente,
+      status: relatedEstoque?.status || 'Disponível'
+    });
+    
+    // Populate cart items
+    const restoredCart = groupEntries.map((e: any) => {
+      // Find base item details
+      const baseItem = (db.items || []).find((item: any) => 
+        (item.codigoItem && e.codigoItem && item.codigoItem === e.codigoItem) || 
+        (item.codigoSAP === e.codigoSAP)
+      ) || {};
+      return {
+        ...baseItem,
+        id: e.id.split('-estoque')[0].split('-')[1] || baseItem.id || String(Date.now() + Math.random()),
+        codigoItem: e.codigoItem,
+        codigoSAP: e.codigoSAP,
+        descricao: e.descricao,
+        quantity: e.quantidade,
+        und: e.und,
+        valor: baseItem.valor || (relatedEstoque?.valorTotal / (relatedEstoque?.saldo || 1)) || 0
+      };
+    });
+    
+    setCart(restoredCart);
+    setEditingNumDoc(entrada.numDoc);
+    setIsModalOpen(true);
+  };
+
   const handleCadastrar = async () => {
     if (!headerData.notaFiscal) {
-      alert('Por favor, preencha os campos obrigatórios (Nota Fiscal).');
+      setAlertMessage('Por favor, preencha os campos obrigatórios (Nota Fiscal).');
       return;
     }
     if (cart.length === 0) {
-      alert('Por favor, adicione pelo menos um item à entrada.');
+      setAlertMessage('Por favor, adicione pelo menos um item à entrada.');
       return;
     }
 
-    const docNum = headerData.numDoc || `DOC-${Math.floor(100000 + Math.random() * 900000)}`;
-    const db = await fetchDb();
+    const docNum = editingNumDoc || headerData.numDoc || `DOC-${Math.floor(100000 + Math.random() * 900000)}`;
+    const db = await fetchDb(false, true);
     
     // 1. Create entry records
     const newEntries = cart.map(item => ({
@@ -88,7 +182,8 @@ export function Entrada() {
       numDoc: docNum,
       notaFiscal: headerData.notaFiscal,
       fornecedor: headerData.fornecedor || 'N/A',
-      codigoItem: item.codigoSAP,
+      codigoItem: item.codigoItem || '-',
+      codigoSAP: item.codigoSAP,
       descricao: item.descricao,
       quantidade: item.quantity,
       und: item.und || 'UN',
@@ -96,15 +191,11 @@ export function Entrada() {
       divergente: headerData.divergente
     }));
 
-    const updatedEntradas = [...newEntries, ...entradas];
-    setEntradas(updatedEntradas);
-    db.entradas = updatedEntradas;
-
     // 2. Create physical inventory (estoque) records
     const newEstoqueItems = cart.map(item => ({
       id: `${Date.now()}-${item.id}-estoque`,
       descricao: item.descricao,
-      codigoItem: item.codigoSAP,
+      codigoItem: item.codigoItem || '-',
       codigoSAP: item.codigoSAP,
       saldo: item.quantity,
       qtdRsv: 0,
@@ -122,17 +213,34 @@ export function Entrada() {
       requisitante: '-',
       areaDestino: '-',
       partNumber: item.partNumber || '-',
-      regEntrada: docNum
+      regEntrada: docNum,
+      patrimonio: headerData.patrimonio || '-',
+      status: headerData.status || 'Disponível',
+      imagem: item.foto || null
     }));
 
-    db.estoque = [...newEstoqueItems, ...(db.estoque || [])];
-    await saveDb(db);
+    let updatedEntradas = db.entradas || [];
+    let updatedEstoque = db.estoque || [];
 
+    if (editingNumDoc) {
+      updatedEntradas = updatedEntradas.filter((e: any) => e.numDoc !== editingNumDoc);
+      updatedEstoque = updatedEstoque.filter((est: any) => est.regEntrada !== editingNumDoc);
+    }
+
+    updatedEntradas = [...newEntries, ...updatedEntradas];
+    updatedEstoque = [...newEstoqueItems, ...updatedEstoque];
+
+    setEntradas(updatedEntradas);
+    db.entradas = updatedEntradas;
+    db.estoque = updatedEstoque;
+
+    saveDb(db); // Sync to GitHub in the background asynchronously
     closeModal();
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
+    setEditingNumDoc(null);
     setHeaderData({
       numDoc: '',
       notaFiscal: '',
@@ -142,8 +250,9 @@ export function Entrada() {
       planejador: '',
       enderecoArmazenagem: '',
       patrimonio: '',
-      classificacao: 'C',
-      divergente: false
+      classificacao: 'Investimento',
+      divergente: false,
+      status: 'Disponível'
     });
     setCart([]);
     setItemSearchValue('');
@@ -157,7 +266,12 @@ export function Entrada() {
   });
 
   return (
-    <div className="flex flex-col h-full bg-white overflow-hidden">
+    <motion.div 
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      className="flex flex-col h-full bg-white overflow-hidden"
+    >
       {/* Header Toolbar */}
       <div className="flex items-center justify-between p-4 border-b border-slate-200">
         <div className="relative w-72">
@@ -202,18 +316,20 @@ export function Entrada() {
                 <td className="py-3 px-4 text-slate-600">{entrada.fornecedor}</td>
                 <td className="py-3 px-4">
                   <div className="flex flex-col">
-                    <span className="font-mono text-xs text-slate-500">{entrada.codigoItem}</span>
+                    <span className="font-mono text-xs text-slate-500">
+                      Item: {entrada.codigoItem || '-'} | SAP: {entrada.codigoSAP || '-'}
+                    </span>
                     <span className="text-slate-700">{entrada.descricao}</span>
                   </div>
                 </td>
                 <td className="py-3 px-4">
                   {entrada.divergente ? (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200/50">
-                      <AlertTriangle className="w-3.5 h-3.5" /> Divergente
+                    <span className="text-xs font-semibold text-amber-600">
+                      Divergente
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200/50">
-                      <Check className="w-3.5 h-3.5" /> Regular
+                    <span className="text-xs font-semibold text-emerald-600">
+                      Regular
                     </span>
                   )}
                 </td>
@@ -230,8 +346,16 @@ export function Entrada() {
                         className="fixed inset-0 z-40"
                         onClick={() => setOpenDropdownId(null)}
                       />
-                      <div className="absolute right-8 top-8 w-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50">
-                        <div className="px-4 py-2 text-xs text-slate-400 font-bold border-b border-slate-100">Quantidade</div>
+                      <div className="absolute right-8 top-8 w-44 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50 text-left">
+                        <div className="px-4 py-2 text-xs text-slate-400 font-bold border-b border-slate-100">Ações</div>
+                        <button 
+                          onClick={() => handleStartEdit(entrada)}
+                          className="w-full px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 transition-colors border-b border-slate-100"
+                        >
+                          <Pencil className="w-4 h-4 text-slate-500" />
+                          Editar Entrada
+                        </button>
+                        <div className="px-4 py-2 text-xs text-slate-400 font-bold">Quantidade</div>
                         <div className="px-4 py-2 text-sm text-slate-700 font-mono font-bold">{entrada.quantidade} {entrada.und}</div>
                       </div>
                     </>
@@ -271,7 +395,9 @@ export function Entrada() {
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
                   <div>
-                    <h2 className="text-xl font-bold text-slate-800">Nova Entrada de Material</h2>
+                    <h2 className="text-xl font-bold text-slate-800">
+                      {editingNumDoc ? 'Editar Entrada de Material' : 'Nova Entrada de Material'}
+                    </h2>
                     <p className="text-sm text-slate-500 mt-0.5">Preencha a documentação e adicione os itens ao carrinho de entrada.</p>
                   </div>
                   <button 
@@ -326,38 +452,111 @@ export function Entrada() {
                         />
                       </div>
 
-                      <div>
+                      <div className="relative">
                         <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Projeto PEP</label>
                         <input 
                           name="projetoPep" 
                           value={headerData.projetoPep} 
                           onChange={handleHeaderChange} 
+                          onFocus={() => setShowProjectSuggestions(true)}
+                          onBlur={() => setTimeout(() => setShowProjectSuggestions(false), 200)}
                           type="text" 
-                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340] font-mono" 
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340]" 
                           placeholder="Ex: C018317" 
+                          autoComplete="off"
                         />
+                        {showProjectSuggestions && filteredProjects.length > 0 && (
+                          <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+                            {filteredProjects.map((p) => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onMouseDown={() => {
+                                  setHeaderData(prev => ({
+                                    ...prev,
+                                    projetoPep: p.nomeProjeto,
+                                    planejador: p.planejadores || prev.planejador
+                                  }));
+                                  setShowProjectSuggestions(false);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-slate-50 transition-colors text-sm border-b border-slate-100 last:border-0"
+                              >
+                                <div className="font-semibold text-slate-700">{p.elementoPep}</div>
+                                <div className="text-xs text-slate-500">{p.nomeProjeto}</div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div>
+                      <div className="relative">
                         <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Planejador</label>
                         <input 
                           name="planejador" 
                           value={headerData.planejador} 
                           onChange={handleHeaderChange} 
+                          onFocus={() => setShowPlannerSuggestions(true)}
+                          onBlur={() => setTimeout(() => setShowPlannerSuggestions(false), 200)}
                           type="text" 
                           className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340]" 
                           placeholder="Nome do planejador" 
+                          autoComplete="off"
                         />
+                        {showPlannerSuggestions && filteredPlanners.length > 0 && (
+                          <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+                            {filteredPlanners.map((p) => (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onMouseDown={() => {
+                                  setHeaderData(prev => ({
+                                    ...prev,
+                                    planejador: p.nome
+                                  }));
+                                  setShowPlannerSuggestions(false);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-slate-50 transition-colors text-sm border-b border-slate-100 last:border-0"
+                              >
+                                <div className="font-semibold text-slate-700">{p.nome}</div>
+                                <div className="text-xs text-slate-500">{p.email} ({p.gerencia})</div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div>
+                      <div className="relative">
                         <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Endereço de Armaz.</label>
                         <input 
                           name="enderecoArmazenagem" 
                           value={headerData.enderecoArmazenagem} 
                           onChange={handleHeaderChange} 
+                          onFocus={() => setShowAddressSuggestions(true)}
+                          onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 200)}
                           type="text" 
                           className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340] font-mono" 
                           placeholder="Ex: A-01-01" 
+                          autoComplete="off"
                         />
+                        {showAddressSuggestions && filteredAddresses.length > 0 && (
+                          <div className="absolute left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+                            {filteredAddresses.map((a) => (
+                              <button
+                                key={a.id}
+                                type="button"
+                                onMouseDown={() => {
+                                  setHeaderData(prev => ({
+                                    ...prev,
+                                    enderecoArmazenagem: a.codigo
+                                  }));
+                                  setShowAddressSuggestions(false);
+                                }}
+                                className="w-full text-left px-4 py-2 hover:bg-slate-50 transition-colors text-sm border-b border-slate-100 last:border-0"
+                              >
+                                <div className="font-semibold text-slate-700">{a.codigo}</div>
+                                <div className="text-xs text-slate-500">{a.local} - {a.descricao}</div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
                       <div>
@@ -380,18 +579,66 @@ export function Entrada() {
                           className="w-full px-3 py-2 bg-slate-100 border border-slate-300 rounded-lg text-sm text-slate-500 cursor-not-allowed font-medium" 
                         />
                       </div>
-                      <div className="flex items-center pt-6">
-                        <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
-                          <input 
-                            type="checkbox" 
-                            name="divergente" 
-                            checked={headerData.divergente} 
-                            onChange={handleHeaderChange}
-                            className="w-4 h-4 rounded border-slate-300 text-[#0C2340] focus:ring-[#0C2340]" 
-                          />
-                          Entrada Divergente
-                        </label>
+                      <div className="relative">
+                        <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Status</label>
+                        <button
+                          type="button"
+                          onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                          className="w-full px-3 py-2 border border-slate-350 rounded-lg text-sm text-left focus:outline-none focus:border-[#0C2340] focus:ring-1 focus:ring-[#0C2340] bg-white font-medium text-slate-700 flex items-center justify-between transition-all"
+                        >
+                          <span>{headerData.status || 'Disponível'}</span>
+                          <ChevronDown className="w-4 h-4 text-slate-450 shrink-0" />
+                        </button>
+                        
+                        {isStatusDropdownOpen && (
+                          <>
+                            <div className="fixed inset-0 z-10" onClick={() => setIsStatusDropdownOpen(false)} />
+                            <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-20 overflow-hidden font-semibold text-xs text-slate-600">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setHeaderData(prev => ({ ...prev, status: 'Disponível' }));
+                                  setIsStatusDropdownOpen(false);
+                                }}
+                                className={`w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors ${
+                                  headerData.status === 'Disponível' ? 'bg-slate-50/50 text-[#0C2340]' : ''
+                                }`}
+                              >
+                                Disponível
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setHeaderData(prev => ({ ...prev, status: 'Projeto' }));
+                                  setIsStatusDropdownOpen(false);
+                                }}
+                                className={`w-full px-4 py-2.5 text-left hover:bg-slate-50 transition-colors ${
+                                  headerData.status === 'Projeto' ? 'bg-slate-50/50 text-[#0C2340]' : ''
+                                }`}
+                              >
+                                Projeto
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 select-none pt-2">
+                      <span className="text-sm font-bold text-slate-700">Divergente</span>
+                      <button
+                        type="button"
+                        onClick={() => setHeaderData(prev => ({ ...prev, divergente: !prev.divergente }))}
+                        className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                          headerData.divergente ? 'bg-[#00B4F1]' : 'bg-slate-200'
+                        }`}
+                      >
+                        <span
+                          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                            headerData.divergente ? 'translate-x-5' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
                     </div>
                   </div>
 
@@ -429,7 +676,7 @@ export function Entrada() {
                               >
                                 <div>
                                   <p className="text-sm font-bold text-slate-800">{item.descricao}</p>
-                                  <p className="text-xs text-slate-400 font-mono mt-0.5">{item.codigoSAP} | Part: {item.partNumber || '-'}</p>
+                                  <p className="text-xs text-slate-400 font-mono mt-0.5">Item: {item.codigoItem || '-'} | SAP: {item.codigoSAP} | Part: {item.partNumber || '-'}</p>
                                 </div>
                                 <span className="text-xs font-bold bg-[#00B4F1]/10 text-[#00B4F1] px-2 py-0.5 rounded-full">{item.und}</span>
                               </div>
@@ -444,7 +691,7 @@ export function Entrada() {
                       <table className="w-full text-left text-sm">
                         <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-100">
                           <tr>
-                            <th className="py-3 px-4">Código SAP</th>
+                            <th className="py-3 px-4">Códigos</th>
                             <th className="py-3 px-4">Descrição</th>
                             <th className="py-3 px-4 text-center w-36">Quantidade</th>
                             <th className="py-3 px-4 text-right w-16">Ação</th>
@@ -453,7 +700,12 @@ export function Entrada() {
                         <tbody className="divide-y divide-slate-100">
                           {cart.map(item => (
                             <tr key={item.id} className="hover:bg-white transition-colors">
-                              <td className="py-3 px-4 font-mono font-bold text-slate-600">{item.codigoSAP}</td>
+                              <td className="py-3 px-4 font-mono font-bold text-slate-600">
+                                <div className="flex flex-col text-left">
+                                  <span className="text-xs text-slate-400 font-normal">Item: {item.codigoItem || '-'}</span>
+                                  <span>SAP: {item.codigoSAP}</span>
+                                </div>
+                              </td>
                               <td className="py-3 px-4 font-semibold text-slate-800">{item.descricao}</td>
                               <td className="py-2 px-4 text-center">
                                 <div className="inline-flex items-center bg-slate-100 border border-slate-200 rounded-lg p-1">
@@ -516,7 +768,7 @@ export function Entrada() {
                     className="px-6 py-2.5 bg-[#0C2340] hover:bg-[#0a1d36] disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold transition-colors shadow-sm flex items-center gap-2"
                   >
                     <Check className="w-4 h-4" />
-                    Registrar Entrada
+                    {editingNumDoc ? 'Salvar Alterações' : 'Registrar Entrada'}
                   </button>
                 </div>
               </motion.div>
@@ -524,6 +776,26 @@ export function Entrada() {
           </>
         )}
       </AnimatePresence>
-    </div>
+
+      {/* Custom Toast Alert */}
+      <AnimatePresence>
+        {alertMessage && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-[9999] bg-[#0C2340] border border-slate-700/50 text-white px-6 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 max-w-md w-[90vw]"
+          >
+            <p className="text-sm font-semibold flex-1 leading-snug">{alertMessage}</p>
+            <button 
+              onClick={() => setAlertMessage(null)} 
+              className="text-slate-400 hover:text-white transition-colors p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
